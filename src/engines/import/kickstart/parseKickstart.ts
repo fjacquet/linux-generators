@@ -187,27 +187,22 @@ export function parseKickstart(text: string): ParseResult {
         break
       case 'network': {
         // --prefix is the direct CIDR length; otherwise derive it from --netmask; else default 24.
-        const rawNetmask = flagVal(flags, 'netmask')
         const rawPrefixFlag = flagVal(flags, 'prefix')
-        const rawPrefix =
-          rawPrefixFlag !== undefined
-            ? Number.parseInt(rawPrefixFlag, 10)
-            : rawNetmask !== undefined
-              ? netmaskToPrefix(rawNetmask)
-              : 24
-        const prefix =
-          Number.isFinite(rawPrefix) && rawPrefix >= 0 && rawPrefix <= 32 ? rawPrefix : 24
+        const rawNetmask = flagVal(flags, 'netmask')
         const prefixSource =
           rawPrefixFlag !== undefined
-            ? `prefix "${rawPrefixFlag}"`
+            ? { value: Number.parseInt(rawPrefixFlag, 10), label: `prefix "${rawPrefixFlag}"` }
             : rawNetmask !== undefined
-              ? `netmask "${rawNetmask}"`
+              ? { value: netmaskToPrefix(rawNetmask), label: `netmask "${rawNetmask}"` }
               : undefined
+        const rawPrefix = prefixSource?.value ?? 24
+        const prefix =
+          Number.isFinite(rawPrefix) && rawPrefix >= 0 && rawPrefix <= 32 ? rawPrefix : 24
         if (prefixSource !== undefined && rawPrefix !== prefix) {
           diagnostics.push({
             severity: 'warning',
             field: 'network.interfaces',
-            message: `${prefixSource} in "${raw}" yields out-of-range prefix ${rawPrefix}; defaulting to 24.`,
+            message: `${prefixSource.label} in "${raw}" yields out-of-range prefix ${rawPrefix}; defaulting to 24.`,
           })
         }
         const iface = {
@@ -243,31 +238,32 @@ export function parseKickstart(text: string): ParseResult {
         mapped++
         break
       }
-      case 'rootpw':
-        if (hasFlag(flags, 'lock')) {
-          spec.identity.rootPolicy = 'locked'
-          recordUnknownFlags(
-            name,
-            index,
-            flags.filter((f) => f.key !== 'lock'),
-          )
-          mapped++
-        } else if (hasFlag(flags, 'iscrypted')) {
-          spec.identity.rootPolicy = 'password'
-          spec.identity.rootPasswordCrypt = positionals[0] ?? ''
-          recordUnknownFlags(
-            name,
-            index,
-            flags.filter((f) => f.key !== 'iscrypted'),
-          )
-          mapped++
-        } else {
+      case 'rootpw': {
+        const known = hasFlag(flags, 'lock')
+          ? 'lock'
+          : hasFlag(flags, 'iscrypted')
+            ? 'iscrypted'
+            : undefined
+        if (known === undefined) {
           // Unsupported rootpw mode (e.g. `rootpw --plaintext root`): mapping it
           // would change auth semantics, and recordUnknownFlags would silently
           // drop the positional password. Preserve the whole line verbatim.
           spec.passthrough.kickstart.extraCommands.push(raw)
+          break
         }
+        if (known === 'lock') spec.identity.rootPolicy = 'locked'
+        else {
+          spec.identity.rootPolicy = 'password'
+          spec.identity.rootPasswordCrypt = positionals[0] ?? ''
+        }
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => f.key !== known),
+        )
+        mapped++
         break
+      }
       case 'selinux': {
         const mode = ['enforcing', 'permissive', 'disabled'].find((m) => hasFlag(flags, m))
         if (mode && SELINUX_MODES.has(mode))

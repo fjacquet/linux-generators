@@ -1,69 +1,78 @@
 // src/engines/import/importFile.ts
-import { InstallSpecSchema, type TargetFormat } from '../model'
+import { type InstallSpec, InstallSpecSchema, type TargetFormat } from '../model'
+import type { Diagnostic } from '../types'
 import { parseAutoinstall } from './autoinstall/parseAutoinstall'
 import { detectFormat } from './detectFormat'
 import { parseKickstart } from './kickstart/parseKickstart'
 import { roundTrip } from './roundTrip'
-import type { Fidelity, ImportResult, ParseResult } from './types'
+import type { Fidelity, ImportResult, OkResult } from './types'
 
 const FIDELITY_RANK: Record<Fidelity, number> = { exact: 3, semantic: 2, lossy: 1 }
 
-type OkResult = Extract<ImportResult, { ok: true }>
-type Attempt = { result: OkResult } | { error: string }
+/** A parsed + validated spec, before the (expensive) round-trip is computed. */
+type Parsed = {
+  format: TargetFormat
+  spec: InstallSpec
+  diagnostics: Diagnostic[]
+  mappedCount: number
+  passthroughCount: number
+}
+type Attempt = { parsed: Parsed } | { error: string }
 
-/** Run one parser end-to-end (parse → validate → round-trip). Pure. */
+/** Parse and validate with one parser. Pure. Does NOT round-trip — that is
+ *  deferred to `finalize` so a discarded attempt never pays for a re-emit. */
 function attempt(text: string, format: TargetFormat): Attempt {
-  let parsed: ParseResult
+  let spec: InstallSpec
+  let diagnostics: Diagnostic[]
+  let mappedCount: number
+  let passthroughCount: number
   try {
-    parsed = format === 'autoinstall' ? parseAutoinstall(text) : parseKickstart(text)
+    const parsed = format === 'autoinstall' ? parseAutoinstall(text) : parseKickstart(text)
+    ;({ diagnostics, mappedCount, passthroughCount } = parsed)
+    // Backstop: handlers only write valid values, so this should always pass.
+    const validated = InstallSpecSchema.safeParse(parsed.spec)
+    if (!validated.success) {
+      return {
+        error: `Parsed ${format} spec failed validation: ${validated.error.issues[0]?.message ?? 'unknown'}`,
+      }
+    }
+    spec = validated.data
   } catch (e) {
     return { error: `Could not parse ${format} file: ${(e as Error).message}` }
   }
-  // Backstop: handlers only write valid values, so this should always pass.
-  const validated = InstallSpecSchema.safeParse(parsed.spec)
-  if (!validated.success) {
-    return {
-      error: `Parsed ${format} spec failed validation: ${validated.error.issues[0]?.message ?? 'unknown'}`,
-    }
-  }
-  const rt = roundTrip(text, validated.data, format)
-  return {
-    result: {
-      ok: true,
-      spec: validated.data,
-      diagnostics: parsed.diagnostics,
-      report: { ...rt, mappedCount: parsed.mappedCount, passthroughCount: parsed.passthroughCount },
-    },
-  }
+  return { parsed: { format, spec, diagnostics, mappedCount, passthroughCount } }
 }
 
 /** An attempt is only usable if it mapped at least one setting. The Kickstart
  *  parser never throws (it routes everything unrecognized to passthrough), so a
  *  zero-mapped "success" means the file wasn't actually recognized — treat it as
  *  a failure so a genuinely malformed file still hard-fails. */
-const usable = (a: Attempt): OkResult | null =>
-  'result' in a && a.result.report.mappedCount > 0 ? a.result : null
+const usable = (a: Attempt): Parsed | null =>
+  'parsed' in a && a.parsed.mappedCount > 0 ? a.parsed : null
 
-/** Pick the better of two attempts: higher round-trip fidelity, then more mapped
- *  settings; the detected (primary) format wins ties. */
-function bestOf(primary: Attempt, secondary: Attempt): ImportResult {
-  const pr = usable(primary)
-  const sr = usable(secondary)
-  if (!pr && !sr) {
-    if ('error' in primary) return { ok: false, error: primary.error }
-    if ('error' in secondary) return { ok: false, error: secondary.error }
-    return { ok: false, error: 'Could not recognize the file as Kickstart or Autoinstall.' }
+/** Round-trip the parsed spec and assemble the final report. */
+function finalize(p: Parsed, text: string): OkResult {
+  const rt = roundTrip(text, p.spec, p.format)
+  return {
+    ok: true,
+    spec: p.spec,
+    diagnostics: p.diagnostics,
+    report: { ...rt, mappedCount: p.mappedCount, passthroughCount: p.passthroughCount },
   }
-  if (!pr) return sr as OkResult
-  if (!sr) return pr
-  const fp = FIDELITY_RANK[pr.report.fidelity]
-  const fs = FIDELITY_RANK[sr.report.fidelity]
-  if (fp !== fs) return fp >= fs ? pr : sr
-  return pr.report.mappedCount >= sr.report.mappedCount ? pr : sr
+}
+
+/** Higher round-trip fidelity wins, then more mapped settings; `a` (the detected
+ *  format) keeps ties. */
+const better = (a: OkResult, b: OkResult): OkResult => {
+  const fa = FIDELITY_RANK[a.report.fidelity]
+  const fb = FIDELITY_RANK[b.report.fidelity]
+  if (fa !== fb) return fa > fb ? a : b
+  return a.report.mappedCount >= b.report.mappedCount ? a : b
 }
 
 /** Parse a native install file back into an InstallSpec, with a fidelity report.
- *  Pure. Hard-fails only when neither parser can produce a valid spec.
+ *  Pure. Hard-fails only when neither parser can produce a valid, content-bearing
+ *  spec.
  *
  *  Format detection is a hint, not a verdict: a file whose markers are ambiguous
  *  (or that fails to parse as the detected format) is also tried with the other
@@ -74,24 +83,33 @@ export function importFile(text: string, override?: TargetFormat): ImportResult 
 
   if (override) {
     const a = attempt(text, override)
-    return 'result' in a ? a.result : { ok: false, error: a.error }
+    return 'parsed' in a ? finalize(a.parsed, text) : { ok: false, error: a.error }
   }
 
   const detection = detectFormat(text)
   const secondaryFormat: TargetFormat =
     detection.format === 'autoinstall' ? 'kickstart' : 'autoinstall'
-  const primary = attempt(text, detection.format)
 
-  // Trust a confident, non-lossy detection without the extra parse.
-  if (
-    'result' in primary &&
-    detection.confidence >= 0.5 &&
-    primary.result.report.fidelity !== 'lossy'
-  ) {
-    return primary.result
+  const primary = attempt(text, detection.format)
+  const primaryParsed = usable(primary)
+  const primaryFinal = primaryParsed ? finalize(primaryParsed, text) : null
+
+  // Trust a confident, non-lossy detection without running the other parser.
+  if (primaryFinal && detection.confidence >= 0.5 && primaryFinal.report.fidelity !== 'lossy') {
+    return primaryFinal
   }
 
   // Ambiguous, low-confidence, or lossy/failed → also try the other parser and
-  // keep whichever round-trips better.
-  return bestOf(primary, attempt(text, secondaryFormat))
+  // keep whichever round-trips better. Only usable (>0 mapped) attempts are
+  // round-tripped.
+  const secondary = attempt(text, secondaryFormat)
+  const secondaryParsed = usable(secondary)
+  const secondaryFinal = secondaryParsed ? finalize(secondaryParsed, text) : null
+
+  const finals = [primaryFinal, secondaryFinal].filter((r): r is OkResult => r !== null)
+  if (finals.length === 0) {
+    const err = ('error' in primary && primary.error) || ('error' in secondary && secondary.error)
+    return { ok: false, error: err || 'Could not recognize the file as Kickstart or Autoinstall.' }
+  }
+  return finals.reduce(better)
 }

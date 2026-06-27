@@ -15,3 +15,5 @@ export type FidelityReport = RoundTripResult & { mappedCount: number; passthroug
 export type ImportResult =
   | { ok: true; spec: InstallSpec; report: FidelityReport; diagnostics: Diagnostic[] }
   | { ok: false; error: string }
+/** The success branch of ImportResult — handy for code that only deals with a parsed file. */
+export type OkResult = Extract<ImportResult, { ok: true }>

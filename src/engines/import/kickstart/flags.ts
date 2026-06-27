@@ -176,17 +176,16 @@ export function parseFlags(
       flags.push({ key: body.slice(0, eq), value: stripQuotes(body.slice(eq + 1)), raw: tok })
       continue
     }
+    // For a known command, consult its value-option metadata; otherwise fall
+    // back to the punctuation heuristic. The `next !== undefined` guard narrows
+    // `next` for the rest of the chain.
     const next = tokens[i + 1]
-    const nextIsValueLike = next !== undefined && !next.startsWith('--')
-    // Known command → consult its value-option metadata; otherwise fall back to
-    // the punctuation heuristic.
-    const takesValue = nextIsValueLike
-      ? valueFlags !== undefined
-        ? valueFlags.has(body)
-        : looksLikeValue(next as string)
-      : false
+    const takesValue =
+      next !== undefined &&
+      !next.startsWith('--') &&
+      (valueFlags ? valueFlags.has(body) : looksLikeValue(next))
     if (takesValue) {
-      flags.push({ key: body, value: stripQuotes(next as string), raw: `${tok} ${next}` })
+      flags.push({ key: body, value: stripQuotes(next), raw: `${tok} ${next}` })
       i++
     } else {
       flags.push({ key: body, value: null, raw: tok })

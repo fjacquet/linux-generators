@@ -215,15 +215,19 @@ export function parseAutoinstall(text: string): ParseResult {
     const net = ai.network
     if (isObj(net.ethernets)) {
       const { interfaces, consumed } = parseEthernets(net.ethernets, diagnostics)
-      if (interfaces.length > 0) spec.network.interfaces = interfaces
-      // Consume only the leaves parseEthernets actually mapped; unmodeled keys
-      // (mtu, match, dhcp6, nameservers.search, …) and the leaves of skipped
-      // entries survive in extraKeys.
-      // NOTE: 'routes' is intentionally NOT consumed — if gateway4 is present it
-      // wins; on re-emit the emitter emits gateway4 + deepMerge puts routes back;
-      // re-parse maps gateway4→gateway and keeps routes in extraKeys → stable.
-      for (const path of consumed) consume(...path)
-      if (interfaces.length > 0) mapped++
+      // `consumed` is non-empty only when an interface was actually mapped, so
+      // everything here is gated on the same condition.
+      if (interfaces.length > 0) {
+        spec.network.interfaces = interfaces
+        // Consume only the leaves parseEthernets actually mapped; unmodeled keys
+        // (mtu, match, dhcp6, nameservers.search, …) and the leaves of skipped
+        // entries survive in extraKeys.
+        // NOTE: 'routes' is intentionally NOT consumed — if gateway4 is present it
+        // wins; on re-emit the emitter emits gateway4 + deepMerge puts routes back;
+        // re-parse maps gateway4→gateway and keeps routes in extraKeys → stable.
+        for (const path of consumed) consume(...path)
+        mapped++
+      }
     }
     if ('version' in net) consume('network', 'version')
   }

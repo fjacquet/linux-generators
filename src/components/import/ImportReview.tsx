@@ -1,8 +1,6 @@
 // src/components/import/ImportReview.tsx
-import type { ImportResult } from '@engines/import'
+import type { OkResult } from '@engines/import'
 import { useTranslation } from 'react-i18next'
-
-type OkResult = Extract<ImportResult, { ok: true }>
 
 const BADGE: Record<OkResult['report']['fidelity'], string> = {
   exact: 'bg-emerald-500',
