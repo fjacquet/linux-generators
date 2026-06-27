@@ -32,6 +32,29 @@ describe('buildLateCommand', () => {
     expect(out[0]).toContain('in-target chown -R alice:alice /home/alice/.ssh')
   })
 
+  it('rootPolicy=sshkey → root keys installed under /target/root/.ssh with no chown', () => {
+    // root owns /root already, so the root recipe omits the in-target chown the user one has
+    const out = buildLateCommand(
+      makeSpec((s) => {
+        s.identity.rootPolicy = 'sshkey'
+        s.identity.rootSshKeys = ['ssh-ed25519 AAAAROOT root@host']
+        s.identity.primaryUser.sshKeys = []
+        s.security.firewall.enabled = false
+        s.security.sshHardening.permitRootLogin = true
+        s.security.sshHardening.passwordAuth = true
+        s.security.apparmor = 'enforce'
+      }),
+    )
+    expect(out).toHaveLength(1)
+    expect(out[0]).toContain('mkdir -p /target/root/.ssh')
+    expect(out[0]).toContain(
+      'echo "ssh-ed25519 AAAAROOT root@host" >> /target/root/.ssh/authorized_keys',
+    )
+    expect(out[0]).toContain('chmod 700 /target/root/.ssh')
+    expect(out[0]).toContain('chmod 600 /target/root/.ssh/authorized_keys')
+    expect(out[0]).not.toContain('chown -R root:root')
+  })
+
   it('default hardening (permitRootLogin=false, passwordAuth=false) → sed lines present', () => {
     const out = buildLateCommand(
       makeSpec((s) => {

@@ -113,7 +113,9 @@ export function packagesLines(spec: InstallSpec): string[] {
     if (spec.packages.aptMirror) {
       const u = new URL(spec.packages.aptMirror)
       host = u.hostname
-      dir = u.pathname || '/debian'
+      // a host-only mirror URL yields pathname '/', which is truthy — fall back
+      // to the conventional archive path rather than emit `directory string /`.
+      dir = u.pathname && u.pathname !== '/' ? u.pathname : '/debian'
     }
   } catch {
     // invalid URL — keep defaults

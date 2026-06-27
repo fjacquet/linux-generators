@@ -282,6 +282,13 @@ describe('packagesLines', () => {
     expect(lines).toContain('d-i mirror/http/hostname string deb.debian.org')
   })
 
+  it('host-only aptMirror URL keeps the conventional /debian directory (not bare /)', () => {
+    // new URL('http://host').pathname is '/', which is truthy — must not leak as `directory string /`
+    const lines = packagesLines(makeSpec((s) => (s.packages.aptMirror = 'http://my.mirror.local')))
+    expect(lines).toContain('d-i mirror/http/hostname string my.mirror.local')
+    expect(lines).toContain('d-i mirror/http/directory string /debian')
+  })
+
   it('always emits pkgsel/upgrade none and tasksel standard', () => {
     const lines = packagesLines(makeSpec())
     expect(lines).toContain('d-i pkgsel/upgrade select none')
