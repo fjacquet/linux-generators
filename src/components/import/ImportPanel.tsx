@@ -15,9 +15,13 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
   const onParse = () => setResult(importFile(text))
 
   const onPickFile = async (file: File) => {
-    const content = await file.text()
-    setText(content)
-    setResult(importFile(content))
+    try {
+      const content = await file.text()
+      setText(content)
+      setResult(importFile(content))
+    } catch {
+      toast.error(t('import.fileError'))
+    }
   }
 
   const onConfirm = () => {
@@ -49,7 +53,7 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
             accept=".cfg,.ks,.yaml,.yml,user-data,text/plain"
             onChange={(e) => {
               const f = e.target.files?.[0]
-              if (f) onPickFile(f)
+              if (f) void onPickFile(f)
               e.target.value = ''
             }}
           />

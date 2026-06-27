@@ -1,7 +1,8 @@
+import { ImportPanel } from '@components/import/ImportPanel'
 import { deserialize, PRESET_NAMES, PRESETS, type PresetName, serialize } from '@engines/profile'
 import { selectSpec, selectUi, useGeneratorStore } from '@store/generatorStore'
 import { downloadText } from '@utils/download'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -18,6 +19,7 @@ export function ProfileBar() {
   const loadProfile = useGeneratorStore((s) => s.loadProfile)
   const setDraftAutosave = useGeneratorStore((s) => s.setDraftAutosave)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
 
   const onExport = () => downloadText(`${spec.meta.profileName || 'profile'}.json`, serialize(spec))
 
@@ -38,7 +40,7 @@ export function ProfileBar() {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="relative flex flex-wrap items-center gap-2">
       <select
         className="btn-ghost"
         defaultValue=""
@@ -63,6 +65,9 @@ export function ProfileBar() {
       <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()}>
         {t('profile.import')}
       </button>
+      <button type="button" className="btn-ghost" onClick={() => setImporting(true)}>
+        {t('import.open')}
+      </button>
       <input
         ref={fileRef}
         type="file"
@@ -74,6 +79,11 @@ export function ProfileBar() {
           e.target.value = ''
         }}
       />
+      {importing && (
+        <div className="absolute z-10 mt-2 w-[36rem] max-w-[90vw]">
+          <ImportPanel onClose={() => setImporting(false)} />
+        </div>
+      )}
       <label className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
         <input
           type="checkbox"

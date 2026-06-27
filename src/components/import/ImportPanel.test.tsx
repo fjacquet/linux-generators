@@ -2,10 +2,12 @@
 
 import { useGeneratorStore } from '@store/generatorStore'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { ImportPanel } from './ImportPanel'
 
 describe('ImportPanel', () => {
+  beforeEach(() => useGeneratorStore.getState().reset())
+
   it('parses pasted kickstart text and confirms into the store', () => {
     render(<ImportPanel onClose={() => {}} />)
     const ks = 'text\nlang fr_FR.UTF-8\nselinux --permissive\n'

@@ -111,5 +111,20 @@
   },
   "lang": {
     "label": "Sprache"
+  },
+  "import": {
+    "open": "Installationsdatei importieren…",
+    "paste": "Kickstart- oder Autoinstall-Datei einfügen",
+    "placeholder": "ks.cfg oder user-data hier einfügen…",
+    "parse": "Analysieren",
+    "chooseFile": "Datei wählen",
+    "close": "Schließen",
+    "confirm": "Bestätigen & laden",
+    "cancel": "Zurück",
+    "success": "Installationsdatei importiert",
+    "mapped": "{{count}} Einstellungen zugeordnet",
+    "preserved": "{{count}} unverändert übernommen",
+    "verbatimNote": "Kommentare in %pre/%post/%addon-Abschnitten und nicht modellierte Schlüssel bleiben exakt erhalten; nur Kommentare an einzelnen bekannten Direktiven entfallen (im Diff sichtbar).",
+    "fileError": "Datei konnte nicht gelesen werden"
   }
 }

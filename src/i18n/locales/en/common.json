@@ -111,5 +111,20 @@
   },
   "lang": {
     "label": "Language"
+  },
+  "import": {
+    "open": "Import install file…",
+    "paste": "Paste a kickstart or autoinstall file",
+    "placeholder": "Paste ks.cfg or user-data here…",
+    "parse": "Parse",
+    "chooseFile": "Choose file",
+    "close": "Close",
+    "confirm": "Confirm & load",
+    "cancel": "Back",
+    "success": "Install file imported",
+    "mapped": "Mapped {{count}} settings",
+    "preserved": "Preserved {{count}} verbatim",
+    "verbatimNote": "Comments inside %pre/%post/%addon sections and un-modeled keys are preserved exactly; only comments on individual known directives are dropped (shown in the diff).",
+    "fileError": "Could not read file"
   }
 }
