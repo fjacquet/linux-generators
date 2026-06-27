@@ -34,3 +34,23 @@ describe('SecuritySection cross-format note', () => {
     expect(screen.queryByText(/not emitted for/i)).not.toBeInTheDocument()
   })
 })
+
+describe('SecuritySection on a Debian (preseed) target', () => {
+  beforeEach(() => useGeneratorStore.getState().reset())
+
+  it('shows AppArmor, not SELinux, on a preseed target', () => {
+    useGeneratorStore.getState().chooseFormat('preseed')
+    render(<SecuritySection />)
+    expect(screen.getByText('AppArmor mode')).toBeInTheDocument()
+    expect(screen.queryByText('SELinux mode')).not.toBeInTheDocument()
+  })
+
+  it('shows no "not emitted" note for a customized firewall on Debian', () => {
+    useGeneratorStore.getState().chooseFormat('preseed')
+    useGeneratorStore.getState().update((d) => {
+      d.security.firewall.services = ['ssh', 'http']
+    })
+    render(<SecuritySection />)
+    expect(screen.queryByText(/not emitted for/i)).not.toBeInTheDocument()
+  })
+})

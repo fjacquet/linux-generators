@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 const OPTIONS: { value: TargetFormat; labelKey: string }[] = [
   { value: 'kickstart', labelKey: 'format.kickstart' },
   { value: 'autoinstall', labelKey: 'format.autoinstall' },
+  { value: 'preseed', labelKey: 'format.preseed' },
 ]
 
 export function FormatToggle() {

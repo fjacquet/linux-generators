@@ -8,7 +8,8 @@ import { TextAreaField, ToggleField } from './fields'
 export function ScriptsSection() {
   const { t } = useTranslation()
   const [spec, update] = useSpec()
-  const isUbuntu = spec.target.osFamily === 'ubuntu'
+  const { osFamily } = spec.target
+  const isRhel = osFamily === 'rhel'
   const showRaw = useGeneratorStore(selectUi).showRawPanels
   const setShowRawPanels = useGeneratorStore((s) => s.setShowRawPanels)
 
@@ -16,24 +17,24 @@ export function ScriptsSection() {
     <CollapsibleSection id="scripts" title={t('section.scripts')}>
       <div className="sm:col-span-2">
         <TextAreaField
-          label={isUbuntu ? t('field.earlyCommands') : t('field.preScripts')}
-          value={toLines(isUbuntu ? spec.scripts.earlyCommands : spec.scripts.pre)}
+          label={isRhel ? t('field.preScripts') : t('field.earlyCommands')}
+          value={toLines(isRhel ? spec.scripts.pre : spec.scripts.earlyCommands)}
           onChange={(v) =>
             update((d) => {
-              if (isUbuntu) d.scripts.earlyCommands = fromLines(v)
-              else d.scripts.pre = fromLines(v)
+              if (isRhel) d.scripts.pre = fromLines(v)
+              else d.scripts.earlyCommands = fromLines(v)
             })
           }
         />
       </div>
       <div className="sm:col-span-2">
         <TextAreaField
-          label={isUbuntu ? t('field.lateCommands') : t('field.postScripts')}
-          value={toLines(isUbuntu ? spec.scripts.lateCommands : spec.scripts.post)}
+          label={isRhel ? t('field.postScripts') : t('field.lateCommands')}
+          value={toLines(isRhel ? spec.scripts.post : spec.scripts.lateCommands)}
           onChange={(v) =>
             update((d) => {
-              if (isUbuntu) d.scripts.lateCommands = fromLines(v)
-              else d.scripts.post = fromLines(v)
+              if (isRhel) d.scripts.post = fromLines(v)
+              else d.scripts.lateCommands = fromLines(v)
             })
           }
         />
@@ -43,30 +44,7 @@ export function ScriptsSection() {
       </div>
       {showRaw && (
         <div className="grid gap-4 sm:col-span-2">
-          {isUbuntu ? (
-            <>
-              <TextAreaField
-                label={t('field.rawUserData')}
-                value={spec.scripts.rawAutoinstallUserData}
-                rows={3}
-                onChange={(v) =>
-                  update((d) => {
-                    d.scripts.rawAutoinstallUserData = v
-                  })
-                }
-              />
-              <TextAreaField
-                label={t('field.rawStorage')}
-                value={spec.scripts.rawAutoinstallStorage}
-                rows={3}
-                onChange={(v) =>
-                  update((d) => {
-                    d.scripts.rawAutoinstallStorage = v
-                  })
-                }
-              />
-            </>
-          ) : (
+          {osFamily === 'rhel' && (
             <>
               <TextAreaField
                 label={t('field.rawPre')}
@@ -89,6 +67,42 @@ export function ScriptsSection() {
                 }
               />
             </>
+          )}
+          {osFamily === 'ubuntu' && (
+            <>
+              <TextAreaField
+                label={t('field.rawUserData')}
+                value={spec.scripts.rawAutoinstallUserData}
+                rows={3}
+                onChange={(v) =>
+                  update((d) => {
+                    d.scripts.rawAutoinstallUserData = v
+                  })
+                }
+              />
+              <TextAreaField
+                label={t('field.rawStorage')}
+                value={spec.scripts.rawAutoinstallStorage}
+                rows={3}
+                onChange={(v) =>
+                  update((d) => {
+                    d.scripts.rawAutoinstallStorage = v
+                  })
+                }
+              />
+            </>
+          )}
+          {osFamily === 'debian' && (
+            <TextAreaField
+              label={t('field.rawPreseed')}
+              value={spec.scripts.rawPreseed}
+              rows={3}
+              onChange={(v) =>
+                update((d) => {
+                  d.scripts.rawPreseed = v
+                })
+              }
+            />
           )}
         </div>
       )}
