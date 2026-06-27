@@ -1,5 +1,6 @@
 import type { InstallSpec } from '../../model/installSpec'
 import type { EmitResult } from '../types'
+import { applyUnknownFlags, extraSectionBlocks } from './passthrough'
 import {
   bootloaderLine,
   identityLines,
@@ -26,18 +27,25 @@ export function emitKickstart(spec: InstallSpec): EmitResult {
     ...(spec.meta.buildStamp ? [`# build-stamp: ${spec.meta.buildStamp}`] : []),
   ]
 
-  const commands = [
-    'text',
-    ...sourceLines(spec),
-    ...localeLines(spec),
-    ...networkLines(spec),
-    ...identityLines(spec),
-    ...storageLines(spec),
-    bootloaderLine(spec),
-    ...securityLines(spec),
-    'firstboot --disable',
-    'reboot',
-  ]
+  const ks = spec.passthrough.kickstart
+  const storage = ks.rawStorage.length > 0 ? ks.rawStorage : storageLines(spec)
+
+  const commands = applyUnknownFlags(
+    [
+      'text',
+      ...sourceLines(spec),
+      ...localeLines(spec),
+      ...networkLines(spec),
+      ...identityLines(spec),
+      ...storage,
+      bootloaderLine(spec),
+      ...securityLines(spec),
+      ...ks.extraCommands,
+      'firstboot --disable',
+      'reboot',
+    ],
+    ks.unknownFlags,
+  )
 
   const pre = ksBlock('%pre --log=/var/log/ks-pre.log', [
     ...spec.scripts.pre,
@@ -50,7 +58,16 @@ export function emitKickstart(spec: InstallSpec): EmitResult {
     ...splitRaw(spec.scripts.rawKickstartPost),
   ])
 
-  const content = `${[...header, ...commands, '', ...packagesBlock(spec), '', ...pre, ...post]
+  const content = `${[
+    ...header,
+    ...commands,
+    '',
+    ...packagesBlock(spec),
+    '',
+    ...pre,
+    ...post,
+    ...extraSectionBlocks(ks.extraSections),
+  ]
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trimEnd()}\n`
