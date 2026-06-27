@@ -5,7 +5,15 @@ import type { ParseResult } from '../types'
 import { type Flag, parseFlags } from './flags'
 import { type KsNode, tokenizeKickstart } from './tokenize'
 
-const STORAGE_CMDS = new Set(['clearpart', 'part', 'logvol', 'volgroup', 'raid', 'btrfs'])
+const STORAGE_CMDS = new Set([
+  'autopart',
+  'clearpart',
+  'part',
+  'logvol',
+  'volgroup',
+  'raid',
+  'btrfs',
+])
 const COMPLEX_STORAGE = new Set(['part', 'logvol', 'volgroup', 'raid', 'btrfs'])
 const AUTOPART_KNOWN = new Set(['type', 'encrypted', 'passphrase', 'nohome'])
 const SELINUX_MODES = new Set(['enforcing', 'permissive', 'disabled'])
@@ -102,6 +110,7 @@ export function parseKickstart(text: string): ParseResult {
         break
       case 'lang':
         if (positionals[0]) spec.locale.language = positionals[0]
+        recordUnknownFlags(name, index, flags)
         mapped++
         break
       case 'keyboard':
@@ -164,6 +173,11 @@ export function parseKickstart(text: string): ParseResult {
           spec.identity.rootPolicy = 'password'
           spec.identity.rootPasswordCrypt = positionals[0] ?? ''
         }
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => f.key !== 'lock' && f.key !== 'iscrypted'),
+        )
         mapped++
         break
       case 'selinux': {
@@ -176,11 +190,21 @@ export function parseKickstart(text: string): ParseResult {
             field: 'security.selinux',
             message: `Unrecognized selinux mode in "${raw}"; kept default "${spec.security.selinux}".`,
           })
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => !SELINUX_MODES.has(f.key)),
+        )
         mapped++
         break
       }
       case 'firewall':
         spec.security.firewall.enabled = !hasFlag(flags, 'disabled')
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => f.key !== 'enabled' && f.key !== 'disabled'),
+        )
         mapped++
         break
       case 'autopart':
@@ -189,14 +213,29 @@ export function parseKickstart(text: string): ParseResult {
           spec.storage.encryption.enabled = true
           spec.storage.encryption.passphrase = flagVal(flags, 'passphrase') ?? ''
         }
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => !AUTOPART_KNOWN.has(f.key)),
+        )
         mapped++
         break
       case 'clearpart':
         spec.storage.wipe = hasFlag(flags, 'all') || hasFlag(flags, 'linux')
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => !['all', 'linux', 'none'].includes(f.key)),
+        )
         mapped++
         break
       case 'url':
         spec.packages.installUrl = flagVal(flags, 'url') ?? spec.packages.installUrl
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => f.key !== 'url'),
+        )
         mapped++
         break
       default:

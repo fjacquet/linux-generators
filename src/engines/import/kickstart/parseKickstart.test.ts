@@ -82,4 +82,34 @@ describe('parseKickstart', () => {
       diagnostics.some((d) => d.severity === 'warning' && d.field === 'security.selinux'),
     ).toBe(true)
   })
+
+  it('captures autopart with an unknown flag into rawStorage and does not override scheme', () => {
+    const ks = 'autopart --type=lvm --pool=fast\nclearpart --all\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.storage.scheme).toBe('manual')
+    expect(spec.storage.partitions).toEqual([])
+    expect(spec.passthrough.kickstart.rawStorage).toEqual([
+      'autopart --type=lvm --pool=fast',
+      'clearpart --all',
+    ])
+  })
+
+  it('records an unknown flag on firewall via unknownFlags', () => {
+    const { spec } = parseKickstart('firewall --enabled --service=ssh\n')
+    expect(spec.passthrough.kickstart.unknownFlags).toContainEqual({
+      command: 'firewall',
+      index: 0,
+      flags: ['--service=ssh'],
+    })
+  })
+
+  it('records an unknown flag on rootpw while still mapping the known flag', () => {
+    const { spec } = parseKickstart('rootpw --lock --minlen=8\n')
+    expect(spec.identity.rootPolicy).toBe('locked')
+    expect(spec.passthrough.kickstart.unknownFlags).toContainEqual({
+      command: 'rootpw',
+      index: 0,
+      flags: ['--minlen=8'],
+    })
+  })
 })
