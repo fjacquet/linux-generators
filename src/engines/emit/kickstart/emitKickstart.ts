@@ -3,6 +3,7 @@ import type { EmitResult } from '../types'
 import { applyUnknownFlags, extraSectionBlocks } from './passthrough'
 import {
   bootloaderLine,
+  constantLine,
   identityLines,
   ksBlock,
   localeLines,
@@ -32,27 +33,27 @@ export function emitKickstart(spec: InstallSpec): EmitResult {
 
   const commands = applyUnknownFlags(
     [
-      'text',
+      constantLine(spec, 'mode', 'text'),
       ...sourceLines(spec),
       ...localeLines(spec),
       ...networkLines(spec),
       ...identityLines(spec),
       ...storage,
-      bootloaderLine(spec),
+      constantLine(spec, 'bootloader', bootloaderLine(spec)),
       ...securityLines(spec),
       ...ks.extraCommands,
-      'firstboot --disable',
-      'reboot',
+      constantLine(spec, 'firstboot', 'firstboot --disable'),
+      constantLine(spec, 'power', 'reboot'),
     ],
     ks.unknownFlags,
   )
 
-  const pre = ksBlock('%pre --log=/var/log/ks-pre.log', [
+  const pre = ksBlock(ks.preHeader || '%pre --log=/var/log/ks-pre.log', [
     ...spec.scripts.pre,
     ...splitRaw(spec.scripts.rawKickstartPre),
   ])
 
-  const post = ksBlock('%post --log=/var/log/ks-post.log', [
+  const post = ksBlock(ks.postHeader || '%post --log=/var/log/ks-post.log', [
     ...sshHardeningPost(spec),
     ...spec.scripts.post,
     ...splitRaw(spec.scripts.rawKickstartPost),

@@ -5,6 +5,20 @@ import type { ParseResult } from '../types'
 import { type Flag, parseFlags } from './flags'
 import { type KsNode, tokenizeKickstart } from './tokenize'
 
+// command → slot mapping for constant directives captured verbatim
+const CONSTANT_SLOT: Record<string, string> = {
+  text: 'mode',
+  graphical: 'mode',
+  cmdline: 'mode',
+  bootloader: 'bootloader',
+  services: 'services',
+  firstboot: 'firstboot',
+  reboot: 'power',
+  poweroff: 'power',
+  halt: 'power',
+  shutdown: 'power',
+}
+
 const STORAGE_CMDS = new Set([
   'autopart',
   'clearpart',
@@ -16,6 +30,8 @@ const STORAGE_CMDS = new Set([
 ])
 const COMPLEX_STORAGE = new Set(['part', 'logvol', 'volgroup', 'raid', 'btrfs'])
 const AUTOPART_KNOWN = new Set(['type', 'encrypted', 'passphrase', 'nohome'])
+// flags that are consumed into the spec — others (including --nohome) pass through as unknownFlags
+const AUTOPART_CONSUMED = new Set(['type', 'encrypted', 'passphrase'])
 const SELINUX_MODES = new Set(['enforcing', 'permissive', 'disabled'])
 
 // Match exactly the sed lines emitted by sshHardeningPost() so they are stripped on re-import
@@ -79,6 +95,7 @@ export function parseKickstart(text: string): ParseResult {
     if (node.kind === 'section') {
       const header = node.header
       if (header.startsWith('%packages')) {
+        spec.passthrough.kickstart.packagesHeader = header.slice('%packages'.length)
         for (const line of node.body
           .split('\n')
           .map((l) => l.trim())
@@ -88,9 +105,11 @@ export function parseKickstart(text: string): ParseResult {
         }
         mapped++
       } else if (header.startsWith('%pre')) {
+        spec.passthrough.kickstart.preHeader = header
         spec.scripts.rawKickstartPre = node.body
         mapped++
       } else if (header.startsWith('%post')) {
+        spec.passthrough.kickstart.postHeader = header
         // Strip emitter-generated ssh-hardening sed lines so they are not duplicated on re-emit.
         const remaining: string[] = []
         for (const line of node.body.split('\n')) {
@@ -123,14 +142,18 @@ export function parseKickstart(text: string): ParseResult {
       case 'text':
       case 'reboot':
       case 'poweroff':
+      case 'halt':
       case 'shutdown':
       case 'firstboot':
       case 'cmdline':
       case 'graphical':
       case 'bootloader':
-      case 'services':
-        mapped++ // emit constants — recognized and dropped
+      case 'services': {
+        const slot = CONSTANT_SLOT[name]
+        if (slot !== undefined) spec.passthrough.kickstart.constantLines[slot] = raw
+        mapped++
         break
+      }
       case 'lang':
         if (positionals[0]) spec.locale.language = positionals[0]
         recordUnknownFlags(name, index, flags)
@@ -141,7 +164,7 @@ export function parseKickstart(text: string): ParseResult {
         recordUnknownFlags(
           name,
           index,
-          flags.filter((f) => f.key !== 'vckeymap' && f.key !== 'xlayouts'),
+          flags.filter((f) => f.key !== 'vckeymap'),
         )
         mapped++
         break
@@ -250,7 +273,7 @@ export function parseKickstart(text: string): ParseResult {
         recordUnknownFlags(
           name,
           index,
-          flags.filter((f) => !AUTOPART_KNOWN.has(f.key)),
+          flags.filter((f) => !AUTOPART_CONSUMED.has(f.key)),
         )
         mapped++
         break

@@ -18,11 +18,15 @@ export function ksBlock(header: string, body: string[]): string[] {
   return [header, ...body, '%end']
 }
 
+/** Return the slot value if captured during import, or the hardcoded fallback. */
+export const constantLine = (spec: InstallSpec, slot: string, fallback: string): string =>
+  spec.passthrough.kickstart.constantLines[slot] ?? fallback
+
 export function localeLines(spec: InstallSpec): string[] {
   const { language, keyboard, timezone, utcHardwareClock } = spec.locale
   return [
     `lang ${language}`,
-    `keyboard --vckeymap=${keyboard} --xlayouts='${keyboard}'`,
+    `keyboard --vckeymap=${keyboard}`,
     `timezone ${timezone}${utcHardwareClock ? ' --utc' : ''}`,
   ]
 }
@@ -119,7 +123,7 @@ export function securityLines(spec: InstallSpec): string[] {
       ? `firewall --enabled${firewall.services.map((s) => ` --service=${s}`).join('')}`
       : 'firewall --disabled',
   )
-  out.push('services --enabled=sshd,chronyd')
+  out.push(constantLine(spec, 'services', 'services --enabled=sshd,chronyd'))
   return out
 }
 
@@ -139,7 +143,7 @@ export function bootloaderLine(_spec: InstallSpec): string {
 
 export function packagesBlock(spec: InstallSpec): string[] {
   const { groups, individual } = spec.packages
-  return ['%packages', ...groups, ...individual, '%end']
+  return [`%packages${spec.passthrough.kickstart.packagesHeader}`, ...groups, ...individual, '%end']
 }
 
 /** sshd_config edits derived from sshHardening — KS has no native directive,

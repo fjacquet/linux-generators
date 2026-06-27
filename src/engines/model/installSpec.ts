@@ -144,6 +144,12 @@ const Passthrough = z
         extraSections: z.array(z.object({ header: z.string(), body: z.string() })).default([]),
         // all-or-nothing storage: verbatim partitioning lines that REPLACE engine storage output
         rawStorage: z.array(z.string()).default([]),
+        // verbatim capture of constant-command lines, keyed by slot name
+        constantLines: z.record(z.string(), z.string()).default({}),
+        // section-header passthroughs (empty = use emitter default)
+        packagesHeader: z.string().default(''),
+        preHeader: z.string().default(''),
+        postHeader: z.string().default(''),
       })
       .prefault({}),
     autoinstall: z

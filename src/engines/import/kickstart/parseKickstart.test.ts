@@ -204,4 +204,74 @@ echo hi
       false,
     )
   })
+
+  // --- round-trip fidelity: constant-command / section-header / keyboard / autopart ---
+
+  it('bootloader with extra flags: constantLines captured, re-emit contains --append flag', () => {
+    const ks = 'bootloader --location=mbr --append="quiet"\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.passthrough.kickstart.constantLines.bootloader).toBe(
+      'bootloader --location=mbr --append="quiet"',
+    )
+    const reEmit = emitKickstart(spec).files[0]?.content ?? ''
+    expect(reEmit).toContain('--append="quiet"')
+    // idempotence
+    const s2 = parseKickstart(reEmit).spec
+    expect(s2.passthrough.kickstart.constantLines.bootloader).toBe(
+      spec.passthrough.kickstart.constantLines.bootloader,
+    )
+  })
+
+  it('services with extra flags: re-emit preserves --disabled flag', () => {
+    const ks = 'services --enabled=sshd --disabled=kdump\n'
+    const { spec } = parseKickstart(ks)
+    const reEmit = emitKickstart(spec).files[0]?.content ?? ''
+    expect(reEmit).toContain('--disabled=kdump')
+    const s2 = parseKickstart(reEmit).spec
+    expect(s2.passthrough.kickstart.constantLines.services).toBe(
+      spec.passthrough.kickstart.constantLines.services,
+    )
+  })
+
+  it('%packages --ignoremissing: re-emit preserves header flag', () => {
+    const ks = '%packages --ignoremissing\n@core\n%end\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.passthrough.kickstart.packagesHeader).toBe(' --ignoremissing')
+    const reEmit = emitKickstart(spec).files[0]?.content ?? ''
+    expect(reEmit).toContain('%packages --ignoremissing')
+    const s2 = parseKickstart(reEmit).spec
+    expect(s2.passthrough.kickstart.packagesHeader).toBe(spec.passthrough.kickstart.packagesHeader)
+  })
+
+  it('%post with custom log path: re-emit preserves header', () => {
+    const ks = '%post --log=/root/post.log\necho hi\n%end\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.passthrough.kickstart.postHeader).toBe('%post --log=/root/post.log')
+    const reEmit = emitKickstart(spec).files[0]?.content ?? ''
+    expect(reEmit).toContain('%post --log=/root/post.log')
+    const s2 = parseKickstart(reEmit).spec
+    expect(s2.passthrough.kickstart.postHeader).toBe(spec.passthrough.kickstart.postHeader)
+  })
+
+  it('keyboard --xlayouts flag: re-emit keyboard line contains --xlayouts', () => {
+    const ks = "keyboard --vckeymap=us --xlayouts='fr'\n"
+    const { spec } = parseKickstart(ks)
+    const reEmit = emitKickstart(spec).files[0]?.content ?? ''
+    expect(reEmit).toMatch(/keyboard --vckeymap=us .*--xlayouts='fr'/)
+    // idempotence
+    const s2 = parseKickstart(reEmit).spec
+    expect(s2.passthrough.kickstart.unknownFlags).toEqual(spec.passthrough.kickstart.unknownFlags)
+  })
+
+  it('autopart --nohome: scheme stays autopart-lvm, re-emit contains --nohome', () => {
+    const ks = 'autopart --type=lvm --nohome\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.storage.scheme).toBe('autopart-lvm')
+    const reEmit = emitKickstart(spec).files[0]?.content ?? ''
+    expect(reEmit).toContain('--nohome')
+    // idempotence
+    const s2 = parseKickstart(reEmit).spec
+    expect(s2.storage.scheme).toBe('autopart-lvm')
+    expect(s2.passthrough.kickstart.unknownFlags).toEqual(spec.passthrough.kickstart.unknownFlags)
+  })
 })
