@@ -1,6 +1,7 @@
 // src/engines/import/kickstart/parseKickstart.test.ts
 import { describe, expect, it } from 'vitest'
 import { emitKickstart } from '../../emit/kickstart/emitKickstart'
+import { SLOT_DEFAULTS } from '../../emit/kickstart/sections'
 import { freshDefaultSpec } from '../../model'
 import { roundTrip } from '../roundTrip'
 import { parseKickstart } from './parseKickstart'
@@ -236,7 +237,7 @@ echo hi
   it('%packages --ignoremissing: re-emit preserves header flag', () => {
     const ks = '%packages --ignoremissing\n@core\n%end\n'
     const { spec } = parseKickstart(ks)
-    expect(spec.passthrough.kickstart.packagesHeader).toBe(' --ignoremissing')
+    expect(spec.passthrough.kickstart.packagesHeader).toBe('%packages --ignoremissing')
     const reEmit = emitKickstart(spec).files[0]?.content ?? ''
     expect(reEmit).toContain('%packages --ignoremissing')
     const s2 = parseKickstart(reEmit).spec
@@ -261,6 +262,31 @@ echo hi
     // idempotence
     const s2 = parseKickstart(reEmit).spec
     expect(s2.passthrough.kickstart.unknownFlags).toEqual(spec.passthrough.kickstart.unknownFlags)
+  })
+
+  // --- idempotence regression tests ---
+
+  it('minimal KS (no services/firstboot/reboot/bootloader) has empty constantLines and is idempotent', () => {
+    const ks = 'text\nlang en_US.UTF-8\nrootpw --lock\n'
+    const { spec: spec1 } = parseKickstart(ks)
+    expect(spec1.passthrough.kickstart.constantLines).toEqual({})
+    const reEmit = emitKickstart(spec1).files[0]?.content ?? ''
+    const { spec: spec2 } = parseKickstart(reEmit)
+    expect(spec2).toEqual(spec1)
+  })
+
+  it('constant matching its default is NOT captured into constantLines', () => {
+    const ks = `${SLOT_DEFAULTS.services}\n`
+    const { spec } = parseKickstart(ks)
+    expect(spec.passthrough.kickstart.constantLines.services).toBeUndefined()
+  })
+
+  it('constant differing from its default IS captured into constantLines', () => {
+    const ks = 'services --enabled=sshd,chronyd,ntpd\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.passthrough.kickstart.constantLines.services).toBe(
+      'services --enabled=sshd,chronyd,ntpd',
+    )
   })
 
   it('autopart --nohome: scheme stays autopart-lvm, re-emit contains --nohome', () => {

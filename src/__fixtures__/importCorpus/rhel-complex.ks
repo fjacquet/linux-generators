@@ -14,9 +14,6 @@ part /boot --fstype=xfs --size=1024
 volgroup vg00 pv.01
 logvol / --vgname=vg00 --name=root --size=8192
 bootloader --location=mbr
-services --enabled=sshd,chronyd
-firstboot --disable
-reboot
 module --name=idm --stream=DL1
 %packages
 @^minimal-environment

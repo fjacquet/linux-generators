@@ -4,6 +4,16 @@ import type { InstallSpec } from '../../model/installSpec'
 // (empty array = nothing to emit). `emitKickstart` joins them in canonical
 // order. Keeping them separate keeps each testable and the join trivial.
 
+/** Single source of truth for per-slot default lines — shared with the parser so
+ *  constants that match the default are NOT round-tripped into constantLines. */
+export const SLOT_DEFAULTS: Record<string, string> = {
+  mode: 'text',
+  bootloader: 'bootloader --location=mbr',
+  services: 'services --enabled=sshd,chronyd',
+  firstboot: 'firstboot --disable',
+  power: 'reboot',
+}
+
 /** CIDR prefix → dotted-quad netmask (e.g. 24 → 255.255.255.0). */
 export function prefixToNetmask(prefix: number): string {
   // `<< 32` wraps to `<< 0` in JS, so handle the 0 and 32 extremes explicitly.
@@ -123,7 +133,7 @@ export function securityLines(spec: InstallSpec): string[] {
       ? `firewall --enabled${firewall.services.map((s) => ` --service=${s}`).join('')}`
       : 'firewall --disabled',
   )
-  out.push(constantLine(spec, 'services', 'services --enabled=sshd,chronyd'))
+  out.push(constantLine(spec, 'services', SLOT_DEFAULTS.services))
   return out
 }
 
@@ -138,12 +148,17 @@ export function sourceLines(spec: InstallSpec): string[] {
 export function bootloaderLine(_spec: InstallSpec): string {
   // Anaconda configures the ESP from autopart on UEFI; --location=mbr is the
   // portable choice that works for both firmware types.
-  return 'bootloader --location=mbr'
+  return SLOT_DEFAULTS.bootloader
 }
 
 export function packagesBlock(spec: InstallSpec): string[] {
   const { groups, individual } = spec.packages
-  return [`%packages${spec.passthrough.kickstart.packagesHeader}`, ...groups, ...individual, '%end']
+  return [
+    spec.passthrough.kickstart.packagesHeader || '%packages',
+    ...groups,
+    ...individual,
+    '%end',
+  ]
 }
 
 /** sshd_config edits derived from sshHardening — KS has no native directive,

@@ -2,13 +2,13 @@ import type { InstallSpec } from '../../model/installSpec'
 import type { EmitResult } from '../types'
 import { applyUnknownFlags, extraSectionBlocks } from './passthrough'
 import {
-  bootloaderLine,
   constantLine,
   identityLines,
   ksBlock,
   localeLines,
   networkLines,
   packagesBlock,
+  SLOT_DEFAULTS,
   securityLines,
   sourceLines,
   sshHardeningPost,
@@ -33,17 +33,17 @@ export function emitKickstart(spec: InstallSpec): EmitResult {
 
   const commands = applyUnknownFlags(
     [
-      constantLine(spec, 'mode', 'text'),
+      constantLine(spec, 'mode', SLOT_DEFAULTS.mode),
       ...sourceLines(spec),
       ...localeLines(spec),
       ...networkLines(spec),
       ...identityLines(spec),
       ...storage,
-      constantLine(spec, 'bootloader', bootloaderLine(spec)),
+      constantLine(spec, 'bootloader', SLOT_DEFAULTS.bootloader),
       ...securityLines(spec),
       ...ks.extraCommands,
-      constantLine(spec, 'firstboot', 'firstboot --disable'),
-      constantLine(spec, 'power', 'reboot'),
+      constantLine(spec, 'firstboot', SLOT_DEFAULTS.firstboot),
+      constantLine(spec, 'power', SLOT_DEFAULTS.power),
     ],
     ks.unknownFlags,
   )

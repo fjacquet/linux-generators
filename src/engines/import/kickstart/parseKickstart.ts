@@ -1,4 +1,6 @@
 // src/engines/import/kickstart/parseKickstart.ts
+
+import { SLOT_DEFAULTS } from '../../emit/kickstart/sections'
 import { freshDefaultSpec, type InstallSpec } from '../../model'
 import type { Diagnostic } from '../../types'
 import type { ParseResult } from '../types'
@@ -29,7 +31,8 @@ const STORAGE_CMDS = new Set([
   'btrfs',
 ])
 const COMPLEX_STORAGE = new Set(['part', 'logvol', 'volgroup', 'raid', 'btrfs'])
-const AUTOPART_KNOWN = new Set(['type', 'encrypted', 'passphrase', 'nohome'])
+// flags that do NOT trigger complex-storage mode (--nohome and others pass through as unknownFlags)
+const AUTOPART_NOCOMPLEX = new Set(['type', 'encrypted', 'passphrase', 'nohome'])
 // flags that are consumed into the spec — others (including --nohome) pass through as unknownFlags
 const AUTOPART_CONSUMED = new Set(['type', 'encrypted', 'passphrase'])
 const SELINUX_MODES = new Set(['enforcing', 'permissive', 'disabled'])
@@ -71,7 +74,7 @@ export function parseKickstart(text: string): ParseResult {
   const autopart = commands.find((c) => c.name === 'autopart')
   const autopartExtra =
     autopart !== undefined &&
-    parseFlags(autopart.args).flags.some((f) => !AUTOPART_KNOWN.has(f.key))
+    parseFlags(autopart.args).flags.some((f) => !AUTOPART_NOCOMPLEX.has(f.key))
   const hasComplex = commands.some((c) => COMPLEX_STORAGE.has(c.name)) || autopartExtra
   if (hasComplex) {
     for (const c of commands)
@@ -95,7 +98,7 @@ export function parseKickstart(text: string): ParseResult {
     if (node.kind === 'section') {
       const header = node.header
       if (header.startsWith('%packages')) {
-        spec.passthrough.kickstart.packagesHeader = header.slice('%packages'.length)
+        spec.passthrough.kickstart.packagesHeader = header
         for (const line of node.body
           .split('\n')
           .map((l) => l.trim())
@@ -150,7 +153,9 @@ export function parseKickstart(text: string): ParseResult {
       case 'bootloader':
       case 'services': {
         const slot = CONSTANT_SLOT[name]
-        if (slot !== undefined) spec.passthrough.kickstart.constantLines[slot] = raw
+        if (slot !== undefined && raw !== SLOT_DEFAULTS[slot]) {
+          spec.passthrough.kickstart.constantLines[slot] = raw
+        }
         mapped++
         break
       }

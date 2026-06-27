@@ -146,10 +146,10 @@ const Passthrough = z
         rawStorage: z.array(z.string()).default([]),
         // verbatim capture of constant-command lines, keyed by slot name
         constantLines: z.record(z.string(), z.string()).default({}),
-        // section-header passthroughs (empty = use emitter default)
-        packagesHeader: z.string().default(''),
-        preHeader: z.string().default(''),
-        postHeader: z.string().default(''),
+        // section-header passthroughs (defaults match emitter fallbacks for round-trip idempotence)
+        packagesHeader: z.string().default('%packages'),
+        preHeader: z.string().default('%pre --log=/var/log/ks-pre.log'),
+        postHeader: z.string().default('%post --log=/var/log/ks-post.log'),
       })
       .prefault({}),
     autoinstall: z
