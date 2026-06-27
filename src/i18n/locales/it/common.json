@@ -61,7 +61,15 @@
     "rawPre": "%pre grezzo",
     "rawPost": "%post grezzo",
     "rawUserData": "user-data grezzo (YAML)",
-    "rawStorage": "storage.config grezzo (YAML)"
+    "rawStorage": "storage.config grezzo (YAML)",
+    "rootPassword": "Password di root",
+    "userPassword": "Password utente"
+  },
+  "password": {
+    "set": "Imposta",
+    "clear": "Cancella",
+    "isSet": "Password impostata",
+    "hint": "Digita una password o incolla un hash $6$"
   },
   "option": {
     "rootLocked": "Bloccato (solo chiavi SSH)",

@@ -61,7 +61,15 @@
     "rawPre": "Raw %pre",
     "rawPost": "Raw %post",
     "rawUserData": "Raw user-data (YAML)",
-    "rawStorage": "Raw storage.config (YAML)"
+    "rawStorage": "Raw storage.config (YAML)",
+    "rootPassword": "Root password",
+    "userPassword": "User password"
+  },
+  "password": {
+    "set": "Set",
+    "clear": "Clear",
+    "isSet": "Password set",
+    "hint": "Type a password or paste a $6$ hash"
   },
   "option": {
     "rootLocked": "Locked (SSH keys only)",

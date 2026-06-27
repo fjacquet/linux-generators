@@ -1,3 +1,4 @@
+export { generateSalt, hashPassword, sha512crypt } from './crypt'
 export type { ConfigLanguage, EmitResult, EmittedFile, Quirks } from './emit'
 export { emit, emitAutoinstall, emitKickstart, quirksFor } from './emit'
 export { generate } from './generate'

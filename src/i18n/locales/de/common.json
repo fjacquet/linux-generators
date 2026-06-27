@@ -61,7 +61,15 @@
     "rawPre": "Rohes %pre",
     "rawPost": "Rohes %post",
     "rawUserData": "Rohe user-data (YAML)",
-    "rawStorage": "Rohe storage.config (YAML)"
+    "rawStorage": "Rohe storage.config (YAML)",
+    "rootPassword": "Root-Passwort",
+    "userPassword": "Benutzerpasswort"
+  },
+  "password": {
+    "set": "Festlegen",
+    "clear": "Löschen",
+    "isSet": "Passwort festgelegt",
+    "hint": "Passwort eingeben oder einen $6$-Hash einfügen"
   },
   "option": {
     "rootLocked": "Gesperrt (nur SSH-Schlüssel)",

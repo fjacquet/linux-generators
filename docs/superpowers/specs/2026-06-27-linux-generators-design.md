@@ -1,7 +1,8 @@
 # linux-generators — Design
 
-> Status: Phase 1 shipped (scaffold + model + Kickstart engine). The authoritative,
-> full plan lives at `~/.claude/plans/agile-cooking-lantern.md`; this is the in-repo summary.
+> Status: Phases 1–5 shipped (full first release — Kickstart + Autoinstall, diagnostics,
+> profiles/presets, client-side `$6$` hashing). The authoritative full plan lives at
+> `~/.claude/plans/agile-cooking-lantern.md`; this is the in-repo summary.
 
 ## Context
 
@@ -43,10 +44,13 @@ install file → download, 100% client-side, deployed to GitHub Pages.
 
 1. **Scaffold + model + Kickstart MVP** ✅ — configs, fetchGuard, i18n, `InstallSpec`, kickstart
    engine, store/hook, Target/Locale/Storage/Identity form, golden snapshots.
-2. **Autoinstall engine** — `yaml`-based emitter + netplan; FormatToggle; remaining form sections.
-3. **Validation diagnostics** — ksvalidator-style + autoinstall-schema rules; DiagnosticsList.
-4. **Profiles + presets + draft autosave** — JSON profiles, presets, opt-in autosave.
-5. **Passwords + polish + i18n** — `$6$` hashing with a vector matrix, full i18n, integration test.
+2. **Autoinstall engine** ✅ — `yaml`-based emitter + netplan; FormatToggle; remaining form sections.
+3. **Validation diagnostics** ✅ — ksvalidator-style + autoinstall-schema rules; DiagnosticsList.
+4. **Profiles + presets + draft autosave** ✅ — JSON profiles, presets, opt-in secret-stripped autosave.
+5. **Passwords + polish + i18n** ✅ — `$6$` hashing (verified against Drepper vectors), key-parity
+   gate, app integration test.
+
+Future: Debian Preseed and SUSE Agama engines, round-trip import, syntax highlighting.
 
 ## Testing
 

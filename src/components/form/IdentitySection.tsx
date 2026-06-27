@@ -1,8 +1,10 @@
+import { hashPassword } from '@engines/crypt'
 import { type InstallSpec, ROOT_POLICIES } from '@engines/model'
 import { useSpec } from '@hooks/useSpec'
 import { useTranslation } from 'react-i18next'
 import { CollapsibleSection } from './CollapsibleSection'
 import { SelectField, TextAreaField, TextField, ToggleField } from './fields'
+import { PasswordField } from './PasswordField'
 
 const linesToKeys = (text: string): string[] =>
   text
@@ -33,6 +35,24 @@ export function IdentitySection() {
         }
         options={ROOT_POLICIES.map((p) => ({ value: p, label: rootLabel[p] }))}
       />
+      {rootPolicy === 'password' && (
+        <div className="sm:col-span-2">
+          <PasswordField
+            label={t('field.rootPassword')}
+            hasHash={Boolean(spec.identity.rootPasswordCrypt)}
+            onSet={(value) =>
+              update((d) => {
+                d.identity.rootPasswordCrypt = hashPassword(value)
+              })
+            }
+            onClear={() =>
+              update((d) => {
+                d.identity.rootPasswordCrypt = ''
+              })
+            }
+          />
+        </div>
+      )}
       <TextField
         label={t('field.username')}
         value={primaryUser.name}
@@ -59,6 +79,24 @@ export function IdentitySection() {
           onChange={(v) =>
             update((d) => {
               d.identity.primaryUser.sudo = v
+            })
+          }
+        />
+      </div>
+      <div className="sm:col-span-2">
+        <PasswordField
+          label={t('field.userPassword')}
+          hasHash={primaryUser.passwordMode === 'hashed' && Boolean(primaryUser.passwordCrypt)}
+          onSet={(value) =>
+            update((d) => {
+              d.identity.primaryUser.passwordCrypt = hashPassword(value)
+              d.identity.primaryUser.passwordMode = 'hashed'
+            })
+          }
+          onClear={() =>
+            update((d) => {
+              d.identity.primaryUser.passwordCrypt = ''
+              d.identity.primaryUser.passwordMode = 'none'
             })
           }
         />
