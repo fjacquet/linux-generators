@@ -122,6 +122,14 @@ describe('parseKickstart', () => {
     expect(spec.passthrough.kickstart.extraCommands).toContain('rootpw --plaintext root')
   })
 
+  it('keeps a crypt hash with slashes/dots as the rootpw positional (command-aware flags)', () => {
+    // --iscrypted is a boolean option, so the hash stays a positional even when it
+    // contains '/' or '.' (which the old punctuation heuristic misread as a value).
+    const { spec } = parseKickstart('rootpw --iscrypted $6$salt$ab/cd.efGH\n')
+    expect(spec.identity.rootPolicy).toBe('password')
+    expect(spec.identity.rootPasswordCrypt).toBe('$6$salt$ab/cd.efGH')
+  })
+
   it('reads network --prefix directly (does not keep default 24 or record it as unknown)', () => {
     const { spec } = parseKickstart(
       'network --bootproto=static --ip=10.0.0.5 --prefix=16 --device=eth0\n',

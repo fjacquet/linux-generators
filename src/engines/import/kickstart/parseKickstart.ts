@@ -74,7 +74,7 @@ export function parseKickstart(text: string): ParseResult {
   const autopart = commands.find((c) => c.name === 'autopart')
   const autopartExtra =
     autopart !== undefined &&
-    parseFlags(autopart.args).flags.some((f) => !AUTOPART_NOCOMPLEX.has(f.key))
+    parseFlags(autopart.args, 'autopart').flags.some((f) => !AUTOPART_NOCOMPLEX.has(f.key))
   const hasComplex = commands.some((c) => COMPLEX_STORAGE.has(c.name)) || autopartExtra
   if (hasComplex) {
     for (const c of commands)
@@ -141,7 +141,7 @@ export function parseKickstart(text: string): ParseResult {
     // command node
     const { name, args, index, raw } = node
     if (consumedByStorage(name)) continue
-    const { flags, positionals } = parseFlags(args)
+    const { flags, positionals } = parseFlags(args, name)
 
     switch (name) {
       case 'text':
