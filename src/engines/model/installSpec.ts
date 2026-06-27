@@ -126,6 +126,34 @@ const Scripts = z.object({
   rawAutoinstallStorage: z.string().default(''), // AI Curtin storage.config passthrough (YAML)
 })
 
+const Passthrough = z
+  .object({
+    kickstart: z
+      .object({
+        extraCommands: z.array(z.string()).default([]),
+        // index = the 0-based occurrence of `command` in the file, so re-emit appends to the right line
+        unknownFlags: z
+          .array(
+            z.object({
+              command: z.string(),
+              index: z.number().int().min(0),
+              flags: z.array(z.string()),
+            }),
+          )
+          .default([]),
+        extraSections: z.array(z.object({ header: z.string(), body: z.string() })).default([]),
+        // all-or-nothing storage: verbatim partitioning lines that REPLACE engine storage output
+        rawStorage: z.array(z.string()).default([]),
+      })
+      .prefault({}),
+    autoinstall: z
+      .object({
+        extraKeys: z.record(z.string(), z.unknown()).default({}),
+      })
+      .prefault({}),
+  })
+  .prefault({})
+
 const Meta = z.object({
   buildStamp: z.string().default(''),
   generatorVersion: z.string().default('0.1.0'),
@@ -143,6 +171,7 @@ export const InstallSpecSchema = z.object({
   security: Security,
   scripts: Scripts,
   meta: Meta,
+  passthrough: Passthrough,
 })
 
 export type InstallSpec = z.infer<typeof InstallSpecSchema>
