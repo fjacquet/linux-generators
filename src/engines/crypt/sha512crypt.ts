@@ -1,4 +1,4 @@
-import { sha512 } from '@noble/hashes/sha512'
+import { sha512 } from '@noble/hashes/sha2.js'
 
 // SHA-512 crypt ($6$) — Ulrich Drepper's algorithm, implemented over the audited
 // @noble/hashes SHA-512 primitive. Pure and deterministic given (password, salt,
