@@ -194,6 +194,47 @@ autoinstall:
     expect(spec2.storage.scheme).toBe('autopart-lvm')
   })
 
+  it('storage.layout: an unknown name is preserved verbatim (not coerced to LVM) and warns', () => {
+    const ud = `#cloud-config
+autoinstall:
+  version: 1
+  storage:
+    layout:
+      name: zfs
+      password: secret
+`
+    const { spec, diagnostics } = parseAutoinstall(ud)
+    expect(diagnostics.some((d) => d.severity === 'warning' && d.field === 'storage.layout')).toBe(
+      true,
+    )
+    // Proof it was NOT mapped/coerced: the whole subtree survives verbatim in
+    // extraKeys — name and password are NOT consumed. (Scheme stays at the spec
+    // default, which is indistinguishable from a coerced value, so we assert on
+    // preservation instead.)
+    const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const layout = (extra.storage as Record<string, unknown>)?.layout as Record<string, unknown>
+    expect(layout?.name).toBe('zfs')
+    expect(layout?.password).toBe('secret')
+  })
+
+  it('ethernets: a skipped (malformed) static entry keeps its leaves in extraKeys', () => {
+    // No `addresses` and not dhcp4 → parseEthernets skips it; gateway4 must survive.
+    const ud = `#cloud-config
+autoinstall:
+  version: 1
+  network:
+    ethernets:
+      eth9:
+        gateway4: 10.0.0.1
+`
+    const { spec } = parseAutoinstall(ud)
+    const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const eth9 = ((extra.network as Record<string, unknown>)?.ethernets as Record<string, unknown>)
+      ?.eth9 as Record<string, unknown>
+    // The unmapped device's gateway4 was NOT consumed.
+    expect(eth9?.gateway4).toBe('10.0.0.1')
+  })
+
   it('apt.primary: preserves arches in extraKeys, uri maps to aptMirror', () => {
     const ud = `#cloud-config
 autoinstall:

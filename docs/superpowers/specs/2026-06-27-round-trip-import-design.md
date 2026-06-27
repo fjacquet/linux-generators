@@ -181,7 +181,8 @@ content) are kept distinct so re-export never confuses the two.
 - `parseAutoinstall.ts`: `fromYaml(text)` → drop `#cloud-config` + `autoinstall:` root → object. Map known
   keys: `version` (assert `===1`, else diagnostic), `locale`→language, `keyboard.layout/variant`, `timezone`,
   `identity`→network.hostname + primaryUser, `ssh`→install-server / allow-pw→sshHardening.passwordAuth /
-  authorized-keys→primaryUser.sshKeys, `storage.layout.name`→scheme (lvm→autopart-lvm, direct→autopart-plain)
+  authorized-keys→primaryUser.sshKeys, `storage.layout.name`→scheme (lvm→autopart-lvm, direct→autopart-plain;
+  unknown names are preserved verbatim in extraKeys + warned, never coerced to LVM)
   + password→encryption, `storage.config`→rawAutoinstallStorage, `network.ethernets`→interfaces,
   `packages`→individual, `apt.primary[].uri`→aptMirror, `early/late-commands`→scripts, `user-data`→
   rawAutoinstallUserData. `shutdown` is **not** modeled but is preserved in `extraKeys` (not consumed),

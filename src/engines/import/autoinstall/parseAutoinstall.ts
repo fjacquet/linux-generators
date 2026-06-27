@@ -25,9 +25,16 @@ function deleteLeaf(root: Obj, path: string[]): void {
 
 const asString = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined)
 
-/** Parse a netplan ethernets map back to NetInterfaceSpec[]. Bad entries emit warnings, never throw. */
-function parseEthernets(ethernets: Obj, diagnostics: Diagnostic[]): NetInterfaceSpec[] {
+/** Parse a netplan ethernets map back to NetInterfaceSpec[]. Bad entries emit
+ *  warnings, never throw. `consumed` lists the leaf paths that were actually
+ *  mapped (per device + mode) so the caller deletes ONLY those — leaves of
+ *  skipped entries survive verbatim in extraKeys. */
+function parseEthernets(
+  ethernets: Obj,
+  diagnostics: Diagnostic[],
+): { interfaces: NetInterfaceSpec[]; consumed: string[][] } {
   const result: NetInterfaceSpec[] = []
+  const consumed: string[][] = []
   for (const [device, entry] of Object.entries(ethernets)) {
     if (!isObj(entry)) {
       diagnostics.push({
@@ -39,6 +46,7 @@ function parseEthernets(ethernets: Obj, diagnostics: Diagnostic[]): NetInterface
     }
     if (entry.dhcp4 === true) {
       result.push({ device, mode: 'dhcp', ip: '', prefix: 24, gateway: '', nameservers: [] })
+      consumed.push(['network', 'ethernets', device, 'dhcp4'])
       continue
     }
     // static — expect addresses[0] = "ip/prefix"
@@ -103,8 +111,14 @@ function parseEthernets(ethernets: Obj, diagnostics: Diagnostic[]): NetInterface
       nameservers = entry.nameservers.addresses.filter((s): s is string => typeof s === 'string')
     }
     result.push({ device, mode: 'static', ip, prefix, gateway, nameservers })
+    // Only the leaves we read are consumed; routes (and any unmodeled key) survive.
+    // gateway4/nameservers.addresses paths are no-ops here if absent (gateway came
+    // from a route, or there were no nameservers), so listing them is safe.
+    consumed.push(['network', 'ethernets', device, 'addresses'])
+    consumed.push(['network', 'ethernets', device, 'gateway4'])
+    consumed.push(['network', 'ethernets', device, 'nameservers', 'addresses'])
   }
-  return result
+  return { interfaces: result, consumed }
 }
 
 /** Parse an Autoinstall user-data file into an InstallSpec. Throws only on
@@ -200,20 +214,16 @@ export function parseAutoinstall(text: string): ParseResult {
   if (isObj(ai.network)) {
     const net = ai.network
     if (isObj(net.ethernets)) {
-      const interfaces = parseEthernets(net.ethernets, diagnostics)
+      const { interfaces, consumed } = parseEthernets(net.ethernets, diagnostics)
       if (interfaces.length > 0) spec.network.interfaces = interfaces
-      // Consume only the leaves we mapped; unmodeled keys (mtu, match, dhcp6,
-      // nameservers.search, etc.) survive in extraKeys.
-      // NOTE: we intentionally do NOT consume 'routes' — if gateway4 is present it
+      // Consume only the leaves parseEthernets actually mapped; unmodeled keys
+      // (mtu, match, dhcp6, nameservers.search, …) and the leaves of skipped
+      // entries survive in extraKeys.
+      // NOTE: 'routes' is intentionally NOT consumed — if gateway4 is present it
       // wins; on re-emit the emitter emits gateway4 + deepMerge puts routes back;
       // re-parse maps gateway4→gateway and keeps routes in extraKeys → stable.
-      for (const device of Object.keys(net.ethernets)) {
-        consume('network', 'ethernets', device, 'dhcp4')
-        consume('network', 'ethernets', device, 'addresses')
-        consume('network', 'ethernets', device, 'gateway4')
-        consume('network', 'ethernets', device, 'nameservers', 'addresses')
-      }
-      mapped++
+      for (const path of consumed) consume(...path)
+      if (interfaces.length > 0) mapped++
     }
     if ('version' in net) consume('network', 'version')
   }
@@ -221,16 +231,28 @@ export function parseAutoinstall(text: string): ParseResult {
   if (isObj(ai.storage)) {
     if (isObj(ai.storage.layout)) {
       const layout = ai.storage.layout
-      spec.storage.scheme = layout.name === 'direct' ? 'autopart-plain' : 'autopart-lvm'
-      const encPass = asString(layout.password)
-      if (encPass) {
-        spec.storage.encryption.enabled = true
-        spec.storage.encryption.passphrase = encPass
+      const name = asString(layout.name)
+      if (name === 'direct' || name === 'lvm') {
+        spec.storage.scheme = name === 'direct' ? 'autopart-plain' : 'autopart-lvm'
+        const encPass = asString(layout.password)
+        if (encPass) {
+          spec.storage.encryption.enabled = true
+          spec.storage.encryption.passphrase = encPass
+        }
+        // Consume only the leaves we mapped; unmodeled keys (sizing-policy, etc.) survive in extraKeys.
+        consume('storage', 'layout', 'name')
+        consume('storage', 'layout', 'password')
+        mapped++
+      } else {
+        // Unknown/unsupported layout name (e.g. 'zfs', a typo): do NOT coerce to
+        // LVM. Leave the whole subtree verbatim in extraKeys and warn so the
+        // original survives the round-trip instead of being silently rewritten.
+        diagnostics.push({
+          severity: 'warning',
+          field: 'storage.layout',
+          message: `unrecognized storage.layout.name "${String(layout.name)}"; preserved verbatim instead of mapping.`,
+        })
       }
-      // Consume only the leaves we mapped; unmodeled keys (sizing-policy, etc.) survive in extraKeys.
-      consume('storage', 'layout', 'name')
-      consume('storage', 'layout', 'password')
-      mapped++
     }
     // storage.config → manual partitioning passthrough (round-trips via toYaml/fromYaml)
     if ('config' in ai.storage) {
