@@ -1,6 +1,6 @@
 // src/engines/import/kickstart/parseKickstart.ts
 
-import { SLOT_DEFAULTS } from '../../emit/kickstart/sections'
+import { type ConstantSlot, SLOT_DEFAULTS } from '../../emit/kickstart/sections'
 import { freshDefaultSpec, type InstallSpec } from '../../model'
 import type { Diagnostic } from '../../types'
 import type { ParseResult } from '../types'
@@ -8,7 +8,7 @@ import { type Flag, parseFlags } from './flags'
 import { type KsNode, tokenizeKickstart } from './tokenize'
 
 // command → slot mapping for constant directives captured verbatim
-const CONSTANT_SLOT: Record<string, string> = {
+const CONSTANT_SLOT: Record<string, ConstantSlot> = {
   text: 'mode',
   graphical: 'mode',
   cmdline: 'mode',

@@ -4,9 +4,15 @@ import type { InstallSpec } from '../../model/installSpec'
 // (empty array = nothing to emit). `emitKickstart` joins them in canonical
 // order. Keeping them separate keeps each testable and the join trivial.
 
+/** The fixed kickstart constant slots whose original line is captured verbatim on
+ *  import and re-emitted (or, when uncaptured, replaced by the default below). */
+export type ConstantSlot = 'mode' | 'bootloader' | 'services' | 'firstboot' | 'power'
+
 /** Single source of truth for per-slot default lines — shared with the parser so
- *  constants that match the default are NOT round-tripped into constantLines. */
-export const SLOT_DEFAULTS: Record<string, string> = {
+ *  constants that match the default are NOT round-tripped into constantLines.
+ *  Typed by the finite slot union (not a string index signature) so dot-access
+ *  returns `string`, not `string | undefined`, under noUncheckedIndexedAccess. */
+export const SLOT_DEFAULTS: Record<ConstantSlot, string> = {
   mode: 'text',
   bootloader: 'bootloader --location=mbr',
   services: 'services --enabled=sshd,chronyd',
