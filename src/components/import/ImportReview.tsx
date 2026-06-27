@@ -42,6 +42,9 @@ export function ImportReview({
         </span>
       </div>
       <p className="text-xs text-slate-500 dark:text-slate-400">{t('import.verbatimNote')}</p>
+      {report.fidelity === 'lossy' && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">{t('import.lossyNote')}</p>
+      )}
       <pre className="code-pane max-h-72 overflow-auto text-xs">{diffRows}</pre>
       {diagnostics.length > 0 && (
         <ul className="space-y-1 text-sm">

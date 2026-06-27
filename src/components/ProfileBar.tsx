@@ -24,12 +24,16 @@ export function ProfileBar() {
   const onExport = () => downloadText(`${spec.meta.profileName || 'profile'}.json`, serialize(spec))
 
   const onImport = async (file: File) => {
-    const result = deserialize(await file.text())
-    if (result.ok) {
-      loadProfile(result.spec)
-      toast.success(t('profile.imported'))
-    } else {
-      toast.error(`${t('profile.importError')}: ${result.error}`)
+    try {
+      const result = deserialize(await file.text())
+      if (result.ok) {
+        loadProfile(result.spec)
+        toast.success(t('profile.imported'))
+      } else {
+        toast.error(`${t('profile.importError')}: ${result.error}`)
+      }
+    } catch {
+      toast.error(t('profile.importError'))
     }
   }
 
@@ -75,7 +79,7 @@ export function ProfileBar() {
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0]
-          if (file) onImport(file)
+          if (file) void onImport(file)
           e.target.value = ''
         }}
       />

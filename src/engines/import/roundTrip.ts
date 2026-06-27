@@ -17,6 +17,17 @@ const normalize = (text: string): string[] =>
     .sort() // order-insensitive semantic comparison
 
 /**
+ * INVARIANT — LINE-LEVEL comparison is load-bearing for the "nothing silently lost" guarantee.
+ *
+ * Because the emitter is deterministic from the spec, any content that cannot be represented
+ * in the spec cannot reappear in the re-emit. A line-level diff therefore surfaces every such
+ * dropped construct as `lossy`.
+ *
+ * DO NOT move to token-level or semantic classification without first ensuring that every
+ * dropped construct (command flags, %packages/%pre/%post header flags, unmodeled netplan fields,
+ * etc.) lands in a passthrough bucket so it survives the round-trip. Without that guarantee a
+ * token/semantic classifier would silently report genuine content losses as `semantic` or `exact`.
+ *
  * Classify fidelity between original and re-emitted text.
  *
  * 'exact'    — byte-identical after trim (fast path, no multiset walk needed).

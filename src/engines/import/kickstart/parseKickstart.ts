@@ -156,13 +156,21 @@ export function parseKickstart(text: string): ParseResult {
         mapped++
         break
       case 'network': {
+        const rawNetmask = flagVal(flags, 'netmask')
+        const rawPrefix = rawNetmask !== undefined ? netmaskToPrefix(rawNetmask) : 24
+        const prefix = rawPrefix >= 0 && rawPrefix <= 32 ? rawPrefix : 24
+        if (rawNetmask !== undefined && rawPrefix !== prefix) {
+          diagnostics.push({
+            severity: 'warning',
+            field: 'network.interfaces',
+            message: `netmask "${rawNetmask}" in "${raw}" yields out-of-range prefix ${rawPrefix}; defaulting to 24.`,
+          })
+        }
         const iface = {
           device: flagVal(flags, 'device') ?? 'link',
           mode: (flagVal(flags, 'bootproto') === 'static' ? 'static' : 'dhcp') as 'static' | 'dhcp',
           ip: flagVal(flags, 'ip') ?? '',
-          prefix: flagVal(flags, 'netmask')
-            ? netmaskToPrefix(flagVal(flags, 'netmask') as string)
-            : 24,
+          prefix,
           gateway: flagVal(flags, 'gateway') ?? '',
           nameservers: flagVal(flags, 'nameserver') ? [flagVal(flags, 'nameserver') as string] : [],
         }

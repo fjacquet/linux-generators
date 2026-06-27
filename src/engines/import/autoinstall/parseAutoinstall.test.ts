@@ -133,4 +133,24 @@ describe('parseAutoinstall', () => {
     const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
     expect((extra.ssh as Record<string, unknown>)?.['install-server']).toBe(false)
   })
+
+  it('out-of-range prefix /99 falls back to 24 and emits a warning (does not reject)', () => {
+    const ud = `#cloud-config
+autoinstall:
+  version: 1
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        addresses:
+          - 10.0.0.5/99
+        gateway4: 10.0.0.1
+`
+    const result = parseAutoinstall(ud)
+    expect(result.spec.network.interfaces).toHaveLength(1)
+    expect(result.spec.network.interfaces[0]?.prefix).toBe(24)
+    expect(
+      result.diagnostics.some((d) => d.severity === 'warning' && d.field === 'network.ethernets'),
+    ).toBe(true)
+  })
 })

@@ -97,7 +97,7 @@
   "profile": {
     "preset": "Préréglage",
     "export": "Exporter",
-    "import": "Importer",
+    "import": "Importer un profil (JSON)",
     "autosave": "Enregistrer le brouillon localement",
     "imported": "Profil importé",
     "importError": "Impossible d'importer le profil",
@@ -125,6 +125,7 @@
     "mapped": "{{count}} paramètres mappés",
     "preserved": "{{count}} conservés tels quels",
     "verbatimNote": "Les commentaires dans les sections %pre/%post/%addon et les clés non modélisées sont conservés exactement ; seuls les commentaires sur les directives connues sont supprimés (visibles dans le diff).",
+    "lossyNote": "Certaines directives ont été reformatées ou n'ont pas pu être reproduites à l'identique — vérifiez le diff ci-dessous avant de confirmer.",
     "fileError": "Impossible de lire le fichier"
   }
 }

@@ -184,6 +184,16 @@ echo hi
     expect(s2).toEqual(s1)
   })
 
+  it('garbage netmask 1023.1023.1023.1023 falls back to prefix 24 and emits a warning (does not reject)', () => {
+    const ks =
+      'network --bootproto=static --ip=10.0.0.5 --netmask=1023.1023.1023.1023 --device=eth0\n'
+    const { spec, diagnostics } = parseKickstart(ks)
+    expect(spec.network.interfaces[0]?.prefix).toBe(24)
+    expect(
+      diagnostics.some((d) => d.severity === 'warning' && d.field === 'network.interfaces'),
+    ).toBe(true)
+  })
+
   it('does not route bootloader or services into extraCommands', () => {
     const ks = 'bootloader --location=mbr\nservices --enabled=sshd,chronyd\n'
     const { spec } = parseKickstart(ks)

@@ -70,14 +70,22 @@ function parseEthernets(ethernets: Obj, diagnostics: Diagnostic[]): NetInterface
       continue
     }
     const ip = rawAddr.slice(0, slashIdx)
-    const prefix = Number.parseInt(rawAddr.slice(slashIdx + 1), 10)
-    if (!Number.isFinite(prefix)) {
+    const rawPrefix = Number.parseInt(rawAddr.slice(slashIdx + 1), 10)
+    if (!Number.isFinite(rawPrefix)) {
       diagnostics.push({
         severity: 'warning',
         field: 'network.ethernets',
         message: `ethernet address "${rawAddr}" for device "${device}" has non-numeric prefix; skipped.`,
       })
       continue
+    }
+    const prefix = rawPrefix >= 0 && rawPrefix <= 32 ? rawPrefix : 24
+    if (rawPrefix !== prefix) {
+      diagnostics.push({
+        severity: 'warning',
+        field: 'network.ethernets',
+        message: `ethernet address "${rawAddr}" for device "${device}" has out-of-range prefix ${rawPrefix}; defaulting to 24.`,
+      })
     }
     // gateway: gateway4 takes precedence over a default route entry
     let gateway = asString(entry.gateway4) ?? ''
