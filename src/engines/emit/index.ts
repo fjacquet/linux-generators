@@ -9,6 +9,8 @@ export function emit(spec: InstallSpec, format: TargetFormat): EmitResult {
 }
 
 export { emitAutoinstall } from './autoinstall'
+export type { CrossFormatDrop } from './crossFormat'
+export { crossFormatDrops } from './crossFormat'
 export { emitKickstart } from './kickstart'
 export type { Quirks } from './quirks'
 export { quirksFor } from './quirks'

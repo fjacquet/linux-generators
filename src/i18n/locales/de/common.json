@@ -63,7 +63,8 @@
     "rawUserData": "Rohe user-data (YAML)",
     "rawStorage": "Rohe storage.config (YAML)",
     "rootPassword": "Root-Passwort",
-    "userPassword": "Benutzerpasswort"
+    "userPassword": "Benutzerpasswort",
+    "notEmitted": "Nicht ausgegeben für {{format}}"
   },
   "password": {
     "set": "Festlegen",

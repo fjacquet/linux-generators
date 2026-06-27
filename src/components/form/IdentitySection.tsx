@@ -1,8 +1,10 @@
 import { hashPassword } from '@engines/crypt'
 import { type InstallSpec, ROOT_POLICIES } from '@engines/model'
+import { useCrossFormatDrops } from '@hooks/useCrossFormatDrops'
 import { useSpec } from '@hooks/useSpec'
 import { useTranslation } from 'react-i18next'
 import { CollapsibleSection } from './CollapsibleSection'
+import { CrossFormatGroup } from './CrossFormatNote'
 import { SelectField, TextAreaField, TextField, ToggleField } from './fields'
 import { PasswordField } from './PasswordField'
 
@@ -15,6 +17,7 @@ const linesToKeys = (text: string): string[] =>
 export function IdentitySection() {
   const { t } = useTranslation()
   const [spec, update] = useSpec()
+  const drops = useCrossFormatDrops()
   const { rootPolicy, primaryUser } = spec.identity
 
   const rootLabel: Record<(typeof ROOT_POLICIES)[number], string> = {
@@ -23,8 +26,10 @@ export function IdentitySection() {
     sshkey: t('option.rootSshkey'),
   }
 
-  return (
-    <CollapsibleSection id="identity" title={t('section.identity')}>
+  // Root policy is shown on both targets; `password` is a divergent drop on
+  // Autoinstall (today's emitter locks root), so the group is marked + annotated.
+  const rootFields = (
+    <>
       <SelectField
         label={t('field.rootPolicy')}
         value={rootPolicy}
@@ -52,6 +57,16 @@ export function IdentitySection() {
             }
           />
         </div>
+      )}
+    </>
+  )
+
+  return (
+    <CollapsibleSection id="identity" title={t('section.identity')}>
+      {drops.has('identity.rootPolicy') ? (
+        <CrossFormatGroup>{rootFields}</CrossFormatGroup>
+      ) : (
+        rootFields
       )}
       <TextField
         label={t('field.username')}

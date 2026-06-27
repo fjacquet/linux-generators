@@ -64,6 +64,15 @@ describe('emitAutoinstall variants', () => {
     expect(fields).not.toContain('security.firewall')
   })
 
+  it('warns when the firewall is active with a customized ruleset', () => {
+    const s = ubuntuSpec((d) => {
+      // default ['ssh'] is silent; an extra service is lost intent on Ubuntu
+      d.security.firewall.services = ['ssh', 'http']
+    })
+    const fields = emitAutoinstall(s).diagnostics.map((x) => x.field)
+    expect(fields).toContain('security.firewall')
+  })
+
   it('emits a static interface with no gateway or nameservers', () => {
     const s = ubuntuSpec((d) => {
       d.network.interfaces = [
