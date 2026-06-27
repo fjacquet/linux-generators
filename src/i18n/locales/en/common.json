@@ -5,7 +5,8 @@
   },
   "format": {
     "kickstart": "Kickstart (RHEL/Fedora)",
-    "autoinstall": "Autoinstall (Ubuntu)"
+    "autoinstall": "Autoinstall (Ubuntu)",
+    "preseed": "Preseed (Debian)"
   },
   "section": {
     "target": "Target",
@@ -62,6 +63,7 @@
     "rawPost": "Raw %post",
     "rawUserData": "Raw user-data (YAML)",
     "rawStorage": "Raw storage.config (YAML)",
+    "rawPreseed": "Raw preseed",
     "rootPassword": "Root password",
     "userPassword": "User password",
     "notEmitted": "Not emitted for {{format}}"

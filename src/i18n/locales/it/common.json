@@ -5,7 +5,8 @@
   },
   "format": {
     "kickstart": "Kickstart (RHEL/Fedora)",
-    "autoinstall": "Autoinstall (Ubuntu)"
+    "autoinstall": "Autoinstall (Ubuntu)",
+    "preseed": "Preseed (Debian)"
   },
   "section": {
     "target": "Destinazione",
@@ -62,6 +63,7 @@
     "rawPost": "%post grezzo",
     "rawUserData": "user-data grezzo (YAML)",
     "rawStorage": "storage.config grezzo (YAML)",
+    "rawPreseed": "preseed grezzo",
     "rootPassword": "Password di root",
     "userPassword": "Password utente",
     "notEmitted": "Non emesso per {{format}}"

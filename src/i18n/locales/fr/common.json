@@ -5,7 +5,8 @@
   },
   "format": {
     "kickstart": "Kickstart (RHEL/Fedora)",
-    "autoinstall": "Autoinstall (Ubuntu)"
+    "autoinstall": "Autoinstall (Ubuntu)",
+    "preseed": "Preseed (Debian)"
   },
   "section": {
     "target": "Cible",
@@ -62,6 +63,7 @@
     "rawPost": "%post brut",
     "rawUserData": "user-data brut (YAML)",
     "rawStorage": "storage.config brut (YAML)",
+    "rawPreseed": "preseed brut",
     "rootPassword": "Mot de passe root",
     "userPassword": "Mot de passe utilisateur",
     "notEmitted": "Non émis pour {{format}}"

@@ -5,7 +5,8 @@
   },
   "format": {
     "kickstart": "Kickstart (RHEL/Fedora)",
-    "autoinstall": "Autoinstall (Ubuntu)"
+    "autoinstall": "Autoinstall (Ubuntu)",
+    "preseed": "Preseed (Debian)"
   },
   "section": {
     "target": "Ziel",
@@ -62,6 +63,7 @@
     "rawPost": "Rohes %post",
     "rawUserData": "Rohe user-data (YAML)",
     "rawStorage": "Rohe storage.config (YAML)",
+    "rawPreseed": "Rohes preseed",
     "rootPassword": "Root-Passwort",
     "userPassword": "Benutzerpasswort",
     "notEmitted": "Nicht ausgegeben für {{format}}"
