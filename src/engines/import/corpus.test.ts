@@ -15,13 +15,28 @@ const cases = Object.entries(files).map(([path, content]) => ({
   format: (path.endsWith('.ks') ? 'kickstart' : 'autoinstall') as TargetFormat,
 }))
 
-// These fixtures are hand-written with non-canonical formatting (flag order,
-// shorthands, omitted flags). The emitter canonicalizes every mapped directive,
-// so the FIRST-PASS report.fidelity is legitimately 'semantic'/'lossy' — that is
-// the classifier being conservative, not a loss. We assert the reformatting-proof
-// guarantees instead: import succeeds, the spec is a fixed point (idempotence),
-// the canonical form is an exact fixed point, and un-modeled constructs are kept
-// verbatim in passthrough. We deliberately do NOT assert first-pass !== 'lossy'.
+// Fixtures use the emitter's canonical forms for all mapped directives so that
+// reformatting does not produce false token-drops. The FIRST-PASS report.fidelity
+// is legitimately 'semantic'/'lossy' for constructs the emitter re-orders (e.g.
+// network flag order) — the classifier is conservative, not a loss. We assert the
+// reformatting-proof guarantees: import succeeds, the spec is a fixed point
+// (idempotence), the canonical form is an exact fixed point, un-modeled constructs
+// are kept verbatim in passthrough, and NO original directive token is dropped on
+// round-trip (the structural "nothing-dropped" assertion below).
+
+// Tokenize non-cosmetic lines (quote-aware), normalize away quote chars so the emitter
+// re-quoting a value differently (e.g. --xlayouts='fr' vs --xlayouts=fr) is not a false drop.
+const TOKEN_RE = /(?:[^\s"']+|"[^"]*"|'[^']*')+/g
+const norm = (t: string): string => t.replace(/['"]/g, '')
+const semanticTokens = (text: string): Set<string> => {
+  const out = new Set<string>()
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim()
+    if (trimmed === '' || trimmed.startsWith('#')) continue
+    for (const tok of trimmed.match(TOKEN_RE) ?? []) out.add(norm(tok))
+  }
+  return out
+}
 
 describe('import corpus round-trip', () => {
   it('loaded both fixtures', () => {
@@ -50,6 +65,17 @@ describe('import corpus round-trip', () => {
     const second = importFile(canonical)
     expect(second.ok).toBe(true)
     if (second.ok) expect(second.report.fidelity).toBe('exact')
+  })
+
+  it.each(cases)('$name drops no original token on re-emit', ({ content, format }) => {
+    const res = importFile(content)
+    expect(res.ok).toBe(true)
+    if (!res.ok) return
+    const reemit = emit(res.spec, format).files[0]?.content ?? ''
+    const origTokens = semanticTokens(content)
+    const reemitTokens = semanticTokens(reemit)
+    const dropped = [...origTokens].filter((t) => !reemitTokens.has(t))
+    expect(dropped, `dropped tokens: ${dropped.join(', ')}`).toEqual([])
   })
 
   it('preserves un-modeled kickstart constructs verbatim', () => {

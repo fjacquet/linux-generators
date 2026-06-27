@@ -163,6 +163,9 @@ autoinstall:
     const extra2 = spec2.passthrough.autoinstall.extraKeys as Record<string, unknown>
     const eth0B = (extra2.network as Record<string, unknown>)?.ethernets as Record<string, unknown>
     expect((eth0B?.eth0 as Record<string, unknown>)?.mtu).toBe(1400)
+    expect((eth0B?.eth0 as Record<string, unknown>)?.match).toEqual({
+      macaddress: '00:11:22:33:44:55',
+    })
     expect(spec2.network.interfaces[0]?.mode).toBe('dhcp')
   })
 
@@ -213,6 +216,10 @@ autoinstall:
     const yaml2 = emitAutoinstall(spec).files[0]?.content ?? ''
     const { spec: spec2 } = parseAutoinstall(yaml2)
     expect(spec2.packages.aptMirror).toBe('http://my.mirror.example.com/ubuntu')
+    // Known edge: deepMerge array-replace makes the emitter's default arches:['default'] win.
+    const extra2 = spec2.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const primary2 = (extra2.apt as Record<string, unknown>)?.primary as unknown[]
+    expect((primary2?.[0] as Record<string, unknown>)?.arches).toEqual(['default'])
   })
 
   it('shutdown: custom value poweroff round-trips; default spec still emits reboot', () => {

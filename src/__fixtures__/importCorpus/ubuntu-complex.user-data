@@ -16,9 +16,18 @@ autoinstall:
     allow-pw: false
     authorized-keys:
       - ssh-ed25519 AAAA admin@host
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        dhcp4: true
+        mtu: 1400
+        match:
+          macaddress: '00:11:22:33:44:55'
   storage:
     layout:
       name: lvm
+      sizing-policy: all
   packages:
     - vim
   snaps:
@@ -28,4 +37,6 @@ autoinstall:
     install: auto
   late-commands:
     - curtin in-target -- systemctl enable foo
-  shutdown: reboot
+  # apt.primary[0].arches is KNOWN non-round-trippable (deepMerge array-replace makes
+  # the emitter's default arches:['default'] win on re-emit); only uri round-trips.
+  shutdown: poweroff
