@@ -8,6 +8,9 @@ import { SelectField } from './fields'
 const DISTROS_BY_FAMILY: Record<InstallSpec['target']['osFamily'], string[]> = {
   rhel: ['rhel', 'fedora', 'rocky', 'alma'],
   ubuntu: ['ubuntu'],
+  // T6 wires Debian into the selectable OS-family options + format swap; this
+  // entry just satisfies the exhaustive Record so the foundation compiles.
+  debian: ['debian'],
 }
 
 const DEFAULT_VERSION: Record<string, string> = {

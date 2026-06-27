@@ -130,4 +130,46 @@ describe('crossFormatDrops', () => {
       expect(crossFormatDrops(s, 'kickstart')).toEqual([])
     })
   })
+
+  describe('preseed (Debian)', () => {
+    it('returns nothing for a default Debian spec', () => {
+      expect(crossFormatDrops(spec(), 'preseed')).toEqual([])
+    })
+
+    it('warns on the same RHEL-only fields as autoinstall (selinux / groups / repos)', () => {
+      const selinux = spec((d) => {
+        d.security.selinux = 'permissive'
+      })
+      expect(fields(selinux, 'preseed')).toContain('security.selinux')
+
+      const groups = spec((d) => {
+        d.packages.groups = ['@core']
+      })
+      expect(fields(groups, 'preseed')).toContain('packages.groups')
+
+      const url = spec((d) => {
+        d.packages.installUrl = 'https://mirror.example/os'
+      })
+      expect(fields(url, 'preseed')).toContain('packages.repos')
+    })
+
+    it('addresses the diagnostic to Debian, not Ubuntu', () => {
+      const s = spec((d) => {
+        d.security.selinux = 'permissive'
+      })
+      expect(crossFormatDrops(s, 'preseed')[0]?.message).toContain('Debian')
+    })
+
+    it('does NOT drop firewall, AppArmor, or root password (preseed emits all three)', () => {
+      const s = spec((d) => {
+        d.security.firewall.services = ['ssh', 'http'] // emitted via ufw late_command
+        d.security.apparmor = 'complain' // emitted via aa-* late_command
+        d.identity.rootPolicy = 'password' // native passwd/root-password-crypted
+      })
+      const f = fields(s, 'preseed')
+      expect(f).not.toContain('security.firewall')
+      expect(f).not.toContain('security.apparmor')
+      expect(f).not.toContain('identity.rootPolicy')
+    })
+  })
 })

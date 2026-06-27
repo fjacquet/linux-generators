@@ -7,8 +7,8 @@ import { z } from 'zod'
 // Engines never read anything outside this schema. Format-unique features that
 // don't fit the abstraction live in `scripts.raw*` override blocks.
 
-export const OS_FAMILIES = ['rhel', 'ubuntu'] as const
-export const DISTROS = ['rhel', 'fedora', 'rocky', 'alma', 'ubuntu'] as const
+export const OS_FAMILIES = ['rhel', 'ubuntu', 'debian'] as const
+export const DISTROS = ['rhel', 'fedora', 'rocky', 'alma', 'ubuntu', 'debian'] as const
 export const ARCHES = ['x86_64', 'aarch64'] as const
 export const FIRMWARES = ['bios', 'uefi'] as const
 
@@ -124,6 +124,7 @@ const Scripts = z.object({
   rawKickstartPost: z.string().default(''),
   rawAutoinstallUserData: z.string().default(''), // AI user-data passthrough
   rawAutoinstallStorage: z.string().default(''), // AI Curtin storage.config passthrough (YAML)
+  rawPreseed: z.string().default(''), // PS verbatim `d-i …` directives appended to preseed.cfg
 })
 
 const Passthrough = z
@@ -183,16 +184,29 @@ export const InstallSpecSchema = z.object({
 export type InstallSpec = z.infer<typeof InstallSpecSchema>
 export type NetInterfaceSpec = z.infer<typeof NetInterface>
 export type PartitionSpec = z.infer<typeof Partition>
-export type TargetFormat = 'kickstart' | 'autoinstall'
+export type TargetFormat = 'kickstart' | 'autoinstall' | 'preseed'
 
 /** The OS-family ⇄ format relationship is 1:1; this is the single place it lives. */
 export function defaultTargetForFormat(
   format: TargetFormat,
 ): Pick<InstallSpec['target'], 'osFamily' | 'distro' | 'version'> {
-  return format === 'autoinstall'
-    ? { osFamily: 'ubuntu', distro: 'ubuntu', version: '24.04' }
-    : { osFamily: 'rhel', distro: 'rhel', version: '9' }
+  switch (format) {
+    case 'autoinstall':
+      return { osFamily: 'ubuntu', distro: 'ubuntu', version: '24.04' }
+    case 'preseed':
+      return { osFamily: 'debian', distro: 'debian', version: '13' }
+    default:
+      return { osFamily: 'rhel', distro: 'rhel', version: '9' }
+  }
 }
 
-export const formatForOsFamily = (osFamily: InstallSpec['target']['osFamily']): TargetFormat =>
-  osFamily === 'ubuntu' ? 'autoinstall' : 'kickstart'
+export const formatForOsFamily = (osFamily: InstallSpec['target']['osFamily']): TargetFormat => {
+  switch (osFamily) {
+    case 'ubuntu':
+      return 'autoinstall'
+    case 'debian':
+      return 'preseed'
+    default:
+      return 'kickstart'
+  }
+}
