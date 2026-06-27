@@ -40,4 +40,11 @@ describe('classifyFidelity — duplicate-count awareness', () => {
     const reemit = 'a\n%end\nb\n%end\n'
     expect(classifyFidelity(original, reemit)).toBe('semantic')
   })
+
+  it('treats a dropped #cloud-config header as a real loss (not cosmetic)', () => {
+    // A normal comment is cosmetic, but the cloud-init format marker is not.
+    expect(classifyFidelity('#cloud-config\nversion: 1\n', 'version: 1\n')).toBe('lossy')
+    // Control: an ordinary comment dropping is still only cosmetic.
+    expect(classifyFidelity('# note\nversion: 1\n', 'version: 1\n')).toBe('semantic')
+  })
 })

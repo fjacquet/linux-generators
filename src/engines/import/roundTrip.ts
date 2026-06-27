@@ -3,9 +3,12 @@ import { emit } from '../emit'
 import type { InstallSpec, TargetFormat } from '../model/installSpec'
 import type { Fidelity, RoundTripResult } from './types'
 
-/** A line that carries semantic meaning (not a comment or blank). */
+/** A line that carries semantic meaning (not a comment or blank). The
+ *  `#cloud-config` header is NOT cosmetic — cloud-init treats it as a required
+ *  format marker, so a re-emit that dropped it must surface as a real loss. */
 const isCosmetic = (line: string): boolean => {
   const t = line.trim()
+  if (t === '#cloud-config') return false
   return t === '' || t.startsWith('#')
 }
 

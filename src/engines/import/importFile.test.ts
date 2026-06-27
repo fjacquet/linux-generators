@@ -40,4 +40,27 @@ describe('importFile', () => {
     const res = importFile('#cloud-config\nautoinstall:\n  : : :\n')
     expect(res.ok).toBe(false)
   })
+
+  it('falls back to the kickstart parser when detection markers are absent', () => {
+    // No kickstart marker (no lang/keyboard/rootpw/autopart/%-section…) and no
+    // autoinstall marker → detection ties to autoinstall with confidence 0. The
+    // file is really Kickstart, and the fallback must recover it.
+    const ks = [
+      'network --bootproto=dhcp --device=eth0',
+      'user --name=admin --groups=wheel',
+      'selinux --enforcing',
+      'firewall --enabled --service=ssh',
+    ].join('\n')
+    const res = importFile(ks)
+    expect(res.ok).toBe(true)
+    if (res.ok) {
+      expect(res.spec.target.osFamily).toBe('rhel')
+      expect(res.spec.network.interfaces[0]?.device).toBe('eth0')
+    }
+  })
+
+  it('hard-fails when neither parser recognizes any content', () => {
+    const res = importFile('just\nsome\nrandom prose\n')
+    expect(res.ok).toBe(false)
+  })
 })
