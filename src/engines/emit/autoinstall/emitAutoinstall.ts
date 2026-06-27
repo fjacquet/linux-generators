@@ -103,7 +103,9 @@ export function emitAutoinstall(spec: InstallSpec): EmitResult {
     identity: {
       hostname: spec.network.hostname,
       username: primaryUser.name,
-      realname: primaryUser.gecos || primaryUser.name,
+      // Only emit realname when explicitly set; omitting it avoids injecting
+      // the username as gecos on re-import (idempotence invariant).
+      ...(primaryUser.gecos ? { realname: primaryUser.gecos } : {}),
       password,
     },
     ssh: {

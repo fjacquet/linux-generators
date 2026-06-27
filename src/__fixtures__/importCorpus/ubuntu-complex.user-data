@@ -1,0 +1,31 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: ch
+    variant: fr
+  timezone: Europe/Zurich
+  identity:
+    hostname: web01
+    username: admin
+    password: $6$abc$def
+    shell: /bin/zsh
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      - ssh-ed25519 AAAA admin@host
+  storage:
+    layout:
+      name: lvm
+  packages:
+    - vim
+  snaps:
+    install:
+      - name: microk8s
+  oem:
+    install: auto
+  late-commands:
+    - curtin in-target -- systemctl enable foo
+  shutdown: reboot
