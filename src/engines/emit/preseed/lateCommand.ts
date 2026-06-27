@@ -3,26 +3,35 @@ import type { InstallSpec } from '../../model/installSpec'
 // Pure helpers — each returns the ordered shell fragments for its section.
 // Fragments are joined with '; ' and wrapped in a single d-i late_command line.
 
-function userSshFragments(spec: InstallSpec): string[] {
-  const u = spec.identity.primaryUser
-  if (u.sshKeys.length === 0) return []
+// Install one account's authorized_keys. File ops run in the installer env, so
+// `sshDir` is the /target-prefixed path; the optional chown must run inside the
+// chroot (`in-target`), so it takes the in-system path. Root owns /root → no chown.
+function authorizedKeysFragments(
+  sshDir: string,
+  keys: string[],
+  chown?: { user: string; dir: string },
+): string[] {
+  if (keys.length === 0) return []
   return [
-    `mkdir -p /target/home/${u.name}/.ssh`,
-    ...u.sshKeys.map((k) => `echo "${k}" >> /target/home/${u.name}/.ssh/authorized_keys`),
-    `in-target chown -R ${u.name}:${u.name} /home/${u.name}/.ssh`,
-    `chmod 700 /target/home/${u.name}/.ssh`,
-    `chmod 600 /target/home/${u.name}/.ssh/authorized_keys`,
+    `mkdir -p ${sshDir}`,
+    ...keys.map((k) => `echo "${k}" >> ${sshDir}/authorized_keys`),
+    ...(chown ? [`in-target chown -R ${chown.user}:${chown.user} ${chown.dir}`] : []),
+    `chmod 700 ${sshDir}`,
+    `chmod 600 ${sshDir}/authorized_keys`,
   ]
 }
 
+function userSshFragments(spec: InstallSpec): string[] {
+  const u = spec.identity.primaryUser
+  return authorizedKeysFragments(`/target/home/${u.name}/.ssh`, u.sshKeys, {
+    user: u.name,
+    dir: `/home/${u.name}/.ssh`,
+  })
+}
+
 function rootSshFragments(spec: InstallSpec): string[] {
-  if (spec.identity.rootPolicy !== 'sshkey' || spec.identity.rootSshKeys.length === 0) return []
-  return [
-    'mkdir -p /target/root/.ssh',
-    ...spec.identity.rootSshKeys.map((k) => `echo "${k}" >> /target/root/.ssh/authorized_keys`),
-    'chmod 700 /target/root/.ssh',
-    'chmod 600 /target/root/.ssh/authorized_keys',
-  ]
+  if (spec.identity.rootPolicy !== 'sshkey') return []
+  return authorizedKeysFragments('/target/root/.ssh', spec.identity.rootSshKeys)
 }
 
 function sshdHardeningFragments(spec: InstallSpec): string[] {

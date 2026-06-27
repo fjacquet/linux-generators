@@ -25,7 +25,9 @@ export function emitPreseed(spec: InstallSpec): EmitResult {
     ...(spec.meta.buildStamp ? [`# build-stamp: ${spec.meta.buildStamp}`] : []),
   ]
 
-  const raw = spec.scripts.rawPreseed.trim()
+  // Only the user-authored raw block can contain blank runs; every section emits
+  // single newline-free lines, so normalize just `raw` rather than scan the whole doc.
+  const raw = spec.scripts.rawPreseed.trim().replace(/\n{3,}/g, '\n\n')
 
   const content = `${[
     ...header,
@@ -39,7 +41,6 @@ export function emitPreseed(spec: InstallSpec): EmitResult {
     ...(raw ? [raw] : []),
   ]
     .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
     .trimEnd()}\n`
 
   const diagnostics: Diagnostic[] = crossFormatDrops(spec, 'preseed').map((drop) => ({

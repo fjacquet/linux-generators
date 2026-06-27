@@ -39,19 +39,22 @@ export function networkLines(spec: InstallSpec): string[] {
   return out
 }
 
+// Debian's stock first-user groups. `sudo` is appended explicitly when the user
+// gets sudo — d-i only auto-adds it when root-login is disabled, which it isn't here.
+const BASE_GROUPS = ['audio', 'cdrom', 'video', 'plugdev', 'netdev'] as const
+
 export function identityLines(spec: InstallSpec): string[] {
   const { rootPolicy, rootPasswordCrypt, primaryUser: u } = spec.identity
   const out: string[] = []
 
   if (rootPolicy === 'locked') {
     out.push('d-i passwd/root-login boolean false')
-  } else if (rootPolicy === 'password') {
-    out.push('d-i passwd/root-login boolean true')
-    out.push(`d-i passwd/root-password-crypted password ${rootPasswordCrypt}`)
   } else {
-    // sshkey: lock the root password hash; keys installed by late_command
+    // password → the hash; sshkey → a locked `!` hash so d-i doesn't prompt for a
+    // root password (the keys themselves are installed by the late_command).
     out.push('d-i passwd/root-login boolean true')
-    out.push('d-i passwd/root-password-crypted password !')
+    const hash = rootPolicy === 'password' ? rootPasswordCrypt : '!'
+    out.push(`d-i passwd/root-password-crypted password ${hash}`)
   }
 
   out.push('d-i passwd/make-user boolean true')
@@ -60,7 +63,6 @@ export function identityLines(spec: InstallSpec): string[] {
   if (u.passwordMode === 'hashed' && u.passwordCrypt)
     out.push(`d-i passwd/user-password-crypted password ${u.passwordCrypt}`)
 
-  const BASE_GROUPS = ['audio', 'cdrom', 'video', 'plugdev', 'netdev']
   const groups = u.sudo ? [...BASE_GROUPS, 'sudo'] : BASE_GROUPS
   out.push(`d-i passwd/user-default-groups string ${groups.join(' ')}`)
 
@@ -123,17 +125,8 @@ export function packagesLines(spec: InstallSpec): string[] {
     `d-i mirror/http/directory string ${dir}`,
   ]
 
-  const seen = new Set<string>()
-  const include: string[] = []
-  for (const pkg of spec.packages.individual) {
-    if (!seen.has(pkg)) {
-      seen.add(pkg)
-      include.push(pkg)
-    }
-  }
-  if (spec.identity.primaryUser.sudo && !seen.has('sudo')) {
-    include.push('sudo')
-  }
+  const include = [...new Set(spec.packages.individual)]
+  if (spec.identity.primaryUser.sudo && !include.includes('sudo')) include.push('sudo')
   if (include.length > 0) out.push(`d-i pkgsel/include string ${include.join(' ')}`)
 
   out.push('d-i pkgsel/upgrade select none')
