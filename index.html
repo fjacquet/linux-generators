@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      Privacy invariant — defense in depth. `connect-src 'self'` makes the
+      browser refuse any cross-origin fetch/XHR/WebSocket/sendBeacon before the
+      runtime guard (src/privacy/fetchGuard.ts) even runs. Generation is 100%
+      offline; no dataset ever leaves the browser.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; frame-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Generate Kickstart and Ubuntu Autoinstall files from one form. 100% client-side."
+    />
+    <title>Linux Install Generator</title>
+    <!-- FOUC-prevention: see public/theme-init.js -->
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

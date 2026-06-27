@@ -1,0 +1,73 @@
+{
+  "app": {
+    "title": "Linux-Installations-Generator",
+    "tagline": "Ein Formular, eine gültige unbeaufsichtigte Installationsdatei. 100% clientseitig."
+  },
+  "format": {
+    "kickstart": "Kickstart (RHEL/Fedora)",
+    "autoinstall": "Autoinstall (Ubuntu)"
+  },
+  "section": {
+    "target": "Ziel",
+    "locale": "Lokalisierung",
+    "identity": "Benutzer & SSH",
+    "storage": "Speicher",
+    "network": "Netzwerk",
+    "packages": "Pakete",
+    "security": "Sicherheit",
+    "scripts": "Skripte"
+  },
+  "field": {
+    "osFamily": "OS-Familie",
+    "distro": "Distribution",
+    "version": "Version",
+    "arch": "Architektur",
+    "firmware": "Firmware",
+    "language": "Sprache / Locale",
+    "keyboard": "Tastaturlayout",
+    "timezone": "Zeitzone",
+    "hostname": "Hostname",
+    "rootPolicy": "Root-Konto",
+    "username": "Hauptbenutzer",
+    "userGecos": "Vollständiger Name",
+    "sudo": "Sudo gewähren (wheel)",
+    "sshKeys": "Öffentliche SSH-Schlüssel (einer pro Zeile)",
+    "storageScheme": "Datenträgerlayout",
+    "encryption": "Datenträger verschlüsseln (LUKS)",
+    "passphrase": "Passphrase",
+    "swap": "Swap",
+    "wipe": "Vorhandene Partitionen löschen"
+  },
+  "option": {
+    "rootLocked": "Gesperrt (nur SSH-Schlüssel)",
+    "rootPassword": "Passwort",
+    "rootSshkey": "SSH-Schlüssel",
+    "schemeLvm": "Geführt — LVM",
+    "schemePlain": "Geführt — einfache Partitionen",
+    "schemeDirect": "Geführt — ganzer Datenträger",
+    "schemeManual": "Manuell",
+    "swapAuto": "Automatisch",
+    "swapNone": "Keiner",
+    "swapSize": "Feste Größe",
+    "fwBios": "BIOS",
+    "fwUefi": "UEFI"
+  },
+  "preview": {
+    "title": "Generierte Datei",
+    "download": "Herunterladen",
+    "copy": "Kopieren"
+  },
+  "diagnostics": {
+    "title": "Diagnose",
+    "none": "Keine Probleme — sieht gültig aus."
+  },
+  "actions": {
+    "reset": "Zurücksetzen"
+  },
+  "theme": {
+    "toggle": "Thema umschalten"
+  },
+  "lang": {
+    "label": "Sprache"
+  }
+}

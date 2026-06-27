@@ -1,0 +1,73 @@
+{
+  "app": {
+    "title": "Linux Install Generator",
+    "tagline": "One form, a valid unattended-install file. 100% client-side."
+  },
+  "format": {
+    "kickstart": "Kickstart (RHEL/Fedora)",
+    "autoinstall": "Autoinstall (Ubuntu)"
+  },
+  "section": {
+    "target": "Target",
+    "locale": "Localization",
+    "identity": "Users & SSH",
+    "storage": "Storage",
+    "network": "Network",
+    "packages": "Packages",
+    "security": "Security",
+    "scripts": "Scripts"
+  },
+  "field": {
+    "osFamily": "OS family",
+    "distro": "Distribution",
+    "version": "Version",
+    "arch": "Architecture",
+    "firmware": "Firmware",
+    "language": "Language / locale",
+    "keyboard": "Keyboard layout",
+    "timezone": "Timezone",
+    "hostname": "Hostname",
+    "rootPolicy": "Root account",
+    "username": "Primary user",
+    "userGecos": "Full name",
+    "sudo": "Grant sudo (wheel)",
+    "sshKeys": "SSH public keys (one per line)",
+    "storageScheme": "Disk layout",
+    "encryption": "Encrypt disk (LUKS)",
+    "passphrase": "Passphrase",
+    "swap": "Swap",
+    "wipe": "Wipe existing partitions"
+  },
+  "option": {
+    "rootLocked": "Locked (SSH keys only)",
+    "rootPassword": "Password",
+    "rootSshkey": "SSH key",
+    "schemeLvm": "Guided — LVM",
+    "schemePlain": "Guided — plain partitions",
+    "schemeDirect": "Guided — whole disk",
+    "schemeManual": "Manual",
+    "swapAuto": "Automatic",
+    "swapNone": "None",
+    "swapSize": "Fixed size",
+    "fwBios": "BIOS",
+    "fwUefi": "UEFI"
+  },
+  "preview": {
+    "title": "Generated file",
+    "download": "Download",
+    "copy": "Copy"
+  },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "none": "No issues — looks valid."
+  },
+  "actions": {
+    "reset": "Reset"
+  },
+  "theme": {
+    "toggle": "Toggle theme"
+  },
+  "lang": {
+    "label": "Language"
+  }
+}

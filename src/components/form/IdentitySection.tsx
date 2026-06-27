@@ -1,0 +1,81 @@
+import { type InstallSpec, ROOT_POLICIES } from '@engines/model'
+import { useSpec } from '@hooks/useSpec'
+import { useTranslation } from 'react-i18next'
+import { CollapsibleSection } from './CollapsibleSection'
+import { SelectField, TextAreaField, TextField, ToggleField } from './fields'
+
+const linesToKeys = (text: string): string[] =>
+  text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+
+export function IdentitySection() {
+  const { t } = useTranslation()
+  const [spec, update] = useSpec()
+  const { rootPolicy, primaryUser } = spec.identity
+
+  const rootLabel: Record<(typeof ROOT_POLICIES)[number], string> = {
+    locked: t('option.rootLocked'),
+    password: t('option.rootPassword'),
+    sshkey: t('option.rootSshkey'),
+  }
+
+  return (
+    <CollapsibleSection id="identity" title={t('section.identity')}>
+      <SelectField
+        label={t('field.rootPolicy')}
+        value={rootPolicy}
+        onChange={(v) =>
+          update((d) => {
+            d.identity.rootPolicy = v as InstallSpec['identity']['rootPolicy']
+          })
+        }
+        options={ROOT_POLICIES.map((p) => ({ value: p, label: rootLabel[p] }))}
+      />
+      <TextField
+        label={t('field.username')}
+        value={primaryUser.name}
+        placeholder="admin"
+        onChange={(v) =>
+          update((d) => {
+            d.identity.primaryUser.name = v
+          })
+        }
+      />
+      <TextField
+        label={t('field.userGecos')}
+        value={primaryUser.gecos}
+        onChange={(v) =>
+          update((d) => {
+            d.identity.primaryUser.gecos = v
+          })
+        }
+      />
+      <div className="flex items-end">
+        <ToggleField
+          label={t('field.sudo')}
+          checked={primaryUser.sudo}
+          onChange={(v) =>
+            update((d) => {
+              d.identity.primaryUser.sudo = v
+            })
+          }
+        />
+      </div>
+      <div className="sm:col-span-2">
+        <TextAreaField
+          label={t('field.sshKeys')}
+          value={primaryUser.sshKeys.join('\n')}
+          rows={3}
+          placeholder="ssh-ed25519 AAAA... user@host"
+          onChange={(v) =>
+            update((d) => {
+              d.identity.primaryUser.sshKeys = linesToKeys(v)
+            })
+          }
+        />
+      </div>
+    </CollapsibleSection>
+  )
+}

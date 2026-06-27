@@ -1,0 +1,73 @@
+{
+  "app": {
+    "title": "Générateur d'installation Linux",
+    "tagline": "Un formulaire, un fichier d'installation automatisée valide. 100% côté client."
+  },
+  "format": {
+    "kickstart": "Kickstart (RHEL/Fedora)",
+    "autoinstall": "Autoinstall (Ubuntu)"
+  },
+  "section": {
+    "target": "Cible",
+    "locale": "Localisation",
+    "identity": "Utilisateurs et SSH",
+    "storage": "Stockage",
+    "network": "Réseau",
+    "packages": "Paquets",
+    "security": "Sécurité",
+    "scripts": "Scripts"
+  },
+  "field": {
+    "osFamily": "Famille d'OS",
+    "distro": "Distribution",
+    "version": "Version",
+    "arch": "Architecture",
+    "firmware": "Micrologiciel",
+    "language": "Langue / locale",
+    "keyboard": "Disposition clavier",
+    "timezone": "Fuseau horaire",
+    "hostname": "Nom d'hôte",
+    "rootPolicy": "Compte root",
+    "username": "Utilisateur principal",
+    "userGecos": "Nom complet",
+    "sudo": "Accorder sudo (wheel)",
+    "sshKeys": "Clés publiques SSH (une par ligne)",
+    "storageScheme": "Schéma de disque",
+    "encryption": "Chiffrer le disque (LUKS)",
+    "passphrase": "Phrase secrète",
+    "swap": "Swap",
+    "wipe": "Effacer les partitions existantes"
+  },
+  "option": {
+    "rootLocked": "Verrouillé (clés SSH uniquement)",
+    "rootPassword": "Mot de passe",
+    "rootSshkey": "Clé SSH",
+    "schemeLvm": "Guidé — LVM",
+    "schemePlain": "Guidé — partitions simples",
+    "schemeDirect": "Guidé — disque entier",
+    "schemeManual": "Manuel",
+    "swapAuto": "Automatique",
+    "swapNone": "Aucun",
+    "swapSize": "Taille fixe",
+    "fwBios": "BIOS",
+    "fwUefi": "UEFI"
+  },
+  "preview": {
+    "title": "Fichier généré",
+    "download": "Télécharger",
+    "copy": "Copier"
+  },
+  "diagnostics": {
+    "title": "Diagnostics",
+    "none": "Aucun problème — semble valide."
+  },
+  "actions": {
+    "reset": "Réinitialiser"
+  },
+  "theme": {
+    "toggle": "Changer de thème"
+  },
+  "lang": {
+    "label": "Langue"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "app": {
+    "title": "Generatore di installazione Linux",
+    "tagline": "Un modulo, un file di installazione automatica valido. 100% lato client."
+  },
+  "format": {
+    "kickstart": "Kickstart (RHEL/Fedora)",
+    "autoinstall": "Autoinstall (Ubuntu)"
+  },
+  "section": {
+    "target": "Destinazione",
+    "locale": "Localizzazione",
+    "identity": "Utenti e SSH",
+    "storage": "Archiviazione",
+    "network": "Rete",
+    "packages": "Pacchetti",
+    "security": "Sicurezza",
+    "scripts": "Script"
+  },
+  "field": {
+    "osFamily": "Famiglia OS",
+    "distro": "Distribuzione",
+    "version": "Versione",
+    "arch": "Architettura",
+    "firmware": "Firmware",
+    "language": "Lingua / locale",
+    "keyboard": "Layout tastiera",
+    "timezone": "Fuso orario",
+    "hostname": "Nome host",
+    "rootPolicy": "Account root",
+    "username": "Utente principale",
+    "userGecos": "Nome completo",
+    "sudo": "Concedi sudo (wheel)",
+    "sshKeys": "Chiavi pubbliche SSH (una per riga)",
+    "storageScheme": "Schema del disco",
+    "encryption": "Cifra il disco (LUKS)",
+    "passphrase": "Passphrase",
+    "swap": "Swap",
+    "wipe": "Cancella le partizioni esistenti"
+  },
+  "option": {
+    "rootLocked": "Bloccato (solo chiavi SSH)",
+    "rootPassword": "Password",
+    "rootSshkey": "Chiave SSH",
+    "schemeLvm": "Guidato — LVM",
+    "schemePlain": "Guidato — partizioni semplici",
+    "schemeDirect": "Guidato — intero disco",
+    "schemeManual": "Manuale",
+    "swapAuto": "Automatico",
+    "swapNone": "Nessuno",
+    "swapSize": "Dimensione fissa",
+    "fwBios": "BIOS",
+    "fwUefi": "UEFI"
+  },
+  "preview": {
+    "title": "File generato",
+    "download": "Scarica",
+    "copy": "Copia"
+  },
+  "diagnostics": {
+    "title": "Diagnostica",
+    "none": "Nessun problema — sembra valido."
+  },
+  "actions": {
+    "reset": "Reimposta"
+  },
+  "theme": {
+    "toggle": "Cambia tema"
+  },
+  "lang": {
+    "label": "Lingua"
+  }
+}

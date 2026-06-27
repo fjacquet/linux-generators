@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+/* Class-strategy dark variant: `dark:bg-X` activates when an ancestor has
+ * `class="dark"`. The FOUC script in index.html sets this before paint
+ * based on `localStorage['lg-theme']` and `prefers-color-scheme`. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* linux-generators — "Console" palette: slate surfaces + terminal-green
+ * accent, tuned for reading generated config text. */
+@theme {
+  /* Green primary scale (terminal/console identity) */
+  --color-primary-50: oklch(96% 0.03 150);
+  --color-primary-100: oklch(91% 0.06 150);
+  --color-primary-200: oklch(83% 0.1 150);
+  --color-primary-300: oklch(74% 0.14 150);
+  --color-primary-400: oklch(66% 0.16 150);
+  --color-primary-500: oklch(58% 0.16 150);
+  --color-primary-600: oklch(48% 0.14 150);
+  --color-primary-700: oklch(38% 0.12 150);
+  --color-primary-800: oklch(30% 0.1 150);
+  --color-primary-900: oklch(24% 0.07 150);
+  --color-primary-950: oklch(16% 0.05 150);
+
+  /* Amber accent for warnings (factual, not editorial) */
+  --color-accent-500: oklch(78% 0.16 75);
+
+  /* Diagnostic severities */
+  --color-diag-error: oklch(58% 0.22 25);
+  --color-diag-warn: oklch(72% 0.18 65);
+
+  /* Surface scale */
+  --color-surface-50: oklch(98% 0.005 260);
+  --color-surface-100: oklch(95% 0.008 260);
+  --color-surface-200: oklch(88% 0.01 260);
+  --color-surface-700: oklch(28% 0.02 260);
+  --color-surface-800: oklch(20% 0.02 260);
+  --color-surface-900: oklch(15% 0.02 260);
+
+  /* Fonts */
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .dark body {
+    @apply bg-surface-900 text-slate-100;
+  }
+
+  #root {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply rounded-lg border border-slate-200 bg-white p-4;
+  }
+  .dark .panel {
+    @apply border-surface-700 bg-surface-800;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-slate-700;
+  }
+  .dark .label {
+    @apply text-slate-300;
+  }
+
+  .field-input {
+    @apply mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500;
+  }
+  .dark .field-input {
+    @apply border-surface-700 bg-surface-900 text-slate-100;
+  }
+
+  /* Generated-config preview */
+  .code-pane {
+    @apply overflow-auto rounded-lg border border-slate-800 bg-surface-900 p-4 font-mono text-xs leading-relaxed text-slate-100 whitespace-pre;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500;
+  }
+  .dark .btn-ghost {
+    @apply border-surface-700 text-slate-200 hover:bg-surface-800;
+  }
+}
