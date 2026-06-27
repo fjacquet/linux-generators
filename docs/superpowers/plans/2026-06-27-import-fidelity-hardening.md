@@ -90,9 +90,32 @@ Replace the three whole-subtree `consume(...)` calls so unmodeled sibling leaves
 
 - [ ] **Step 1:** `network.ethernets` (line 205): instead of `consume('network','ethernets')`, for each device in `ethernets` consume only the mapped leaves: `consume('network','ethernets',device,'dhcp4')`, `'addresses'`, `'gateway4'`, `'nameservers')`. Leave `routes`, `mtu`, `match`, `dhcp6`, etc. in `extraKeys`. (`deleteLeaf` already removes a device object and the `ethernets`/`network` parents when they become empty.)
 - [ ] **Step 2:** `storage.layout` (line 220): consume only the mapped leaves (`name`, and `password`/`encrypted` if mapped) instead of the whole `layout`. Leave `sizing-policy` etc.
-- [ ] **Step 3:** `apt.primary` (line 243): map `primary[0].uri`→aptMirror as today, then delete ONLY the `uri` key from the first entry (`if (isObj(primary[0])) { delete primary[0].uri; if (Object.keys(primary[0]).length === 0) remove the entry / leave [] }`). Leave `arches` and any further entries in `extraKeys`. (Note in a code comment: a CUSTOM `arches` on the primary mirror is preserved in `extraKeys` but, due to deepMerge array-replace, the emitter's default `arches:[default]` wins on re-emit — acceptable known edge; uri round-trips.)
-- [ ] **Step 4: Tests** — a `user-data` with `ethernets.eth0.mtu: 1400` + `match` preserves them in `extraKeys` and round-trips idempotently; `storage.layout.sizing-policy` preserved; `apt.primary[0].arches` preserved in `extraKeys`. Run `npx vitest run src/engines/import/autoinstall && npx tsc --noEmit`.
-- [ ] **Step 5: Commit** `feat(import): leaf-precise autoinstall deletion preserves unmodeled netplan/apt/layout keys`
+- [ ] **Step 3:** `apt.primary` (line 243) — IMPORTANT: `consume()`/`deleteLeaf` CANNOT be used here. `extra` is a `structuredClone(ai)` (line 121), and `deleteLeaf` recurses only through `isObj` which excludes arrays (`apt.primary` is an array). So (a) mutating `ai.apt.primary[0]` has no effect on the returned `extraKeys` (built from `extra`), and (b) `consume('apt','primary','0','uri')` is a silent no-op. Read `uri` from `ai` for the mapping, then delete the leaf MANUALLY on the `extra` clone:
+```ts
+if (isObj(ai.apt) && Array.isArray(ai.apt.primary)) {
+  const first = ai.apt.primary[0]
+  if (isObj(first)) {
+    const uri = asString(first.uri)
+    if (uri) spec.packages.aptMirror = uri
+  }
+  // delete the mapped leaf on the `extra` clone (deleteLeaf can't reach into arrays)
+  const extraApt = extra.apt
+  if (isObj(extraApt) && Array.isArray(extraApt.primary)) {
+    const extraFirst = extraApt.primary[0]
+    if (isObj(extraFirst)) {
+      delete extraFirst.uri
+      if (Object.keys(extraFirst).length === 0) extraApt.primary.shift()
+    }
+    if (extraApt.primary.length === 0) delete extraApt.primary
+    if (Object.keys(extraApt).length === 0) delete extra.apt
+  }
+  mapped++
+}
+```
+Leave `arches` and any further entries in `extraKeys`. (Code comment: a CUSTOM `arches` on the primary mirror is preserved in `extraKeys` but, due to deepMerge array-replace, the emitter's default `arches:[default]` wins on re-emit — acceptable known edge; uri round-trips.)
+- [ ] **Step 4: `shutdown` (separate silent-loss bug — fix here).** The parser consumes+discards `shutdown` (lines 270-271) while the emitter hardcodes `autoinstall.shutdown = 'reboot'` (emitAutoinstall.ts:143) and is the deepMerge WINNER — so a custom `shutdown: poweroff`/`halt` is silently overwritten by `reboot`. Fix: (a) parser — DELETE the `if ('shutdown' in ai) { consume('shutdown'); mapped++ }` block entirely so `shutdown` survives into `extraKeys`; (b) emitter — replace `autoinstall.shutdown = 'reboot'` with `autoinstall.shutdown = (extraKeys.shutdown as string) ?? 'reboot'`. Default spec (empty extraKeys) → `'reboot'` → snapshots unchanged; imported `shutdown: poweroff` → `extraKeys.shutdown='poweroff'` → winner is `'poweroff'` → round-trips. NOTE: read `extraKeys` (`spec.passthrough.autoinstall.extraKeys`) BEFORE the `deepMerge` call at emitAutoinstall.ts:145-146.
+- [ ] **Step 5: Tests** — a `user-data` with `ethernets.eth0.mtu: 1400` + `match` preserves them in `extraKeys` and round-trips idempotently; `storage.layout.sizing-policy` preserved; `apt.primary[0].arches` preserved in `extraKeys` (and `uri` still maps to aptMirror); `shutdown: poweroff` round-trips (not overwritten by reboot). Run `npx vitest run src/engines/import/autoinstall src/engines/emit/autoinstall && npx tsc --noEmit`.
+- [ ] **Step 6: Commit** `feat(import): leaf-precise autoinstall deletion + preserve shutdown/netplan/apt/layout keys`
 
 ---
 
@@ -100,8 +123,8 @@ Replace the three whole-subtree `consume(...)` calls so unmodeled sibling leaves
 
 **Files:** Modify `src/__fixtures__/importCorpus/rhel-complex.ks`, `src/__fixtures__/importCorpus/ubuntu-complex.user-data`, `src/engines/import/corpus.test.ts`.
 
-- [ ] **Step 1: Enrich fixtures with edge flags, in canonical mapped-form.** Rewrite the kickstart fixture so mapped directives use the emitter's canonical forms (e.g. `keyboard --vckeymap=us`, network with the emitter's flag order) AND add the previously-dropped constructs: `bootloader --location=mbr --append="quiet"`, `services --enabled=sshd --disabled=kdump`, `%packages --ignoremissing`, a `%post --log=/root/post.log` header, `keyboard --vckeymap=us --xlayouts='fr'`, `autopart`→keep complex storage but add an `autopart`-mode variant note. For the autoinstall fixture add `ethernets.eth0.mtu`, a `match`, `storage.layout.sizing-policy`, `apt.primary[0].arches`.
-- [ ] **Step 2: Add the structural assertion.** A helper tokenizes non-cosmetic lines (reuse the quote-aware split `/(?:[^\s"']+|"[^"]*"|'[^']*')+/g`; skip blank and `#`/`%end`-only — treat `%`-section markers as tokens). For each fixture: build a multiset (Map) of re-emit tokens, then assert every original non-cosmetic token has remaining count (decrement as consumed) — fail naming the first unaccounted token. This is `original ⊆ re-emit` (multiset). Keep the existing idempotence, canonical-exact, and passthrough spot-check assertions.
+- [ ] **Step 1: Enrich fixtures with edge flags, in canonical mapped-form.** Rewrite the kickstart fixture so mapped directives use the emitter's canonical forms (e.g. `keyboard --vckeymap=us`, network with the emitter's flag order) AND add the previously-dropped constructs: `bootloader --location=mbr --append="quiet"`, `services --enabled=sshd --disabled=kdump`, `%packages --ignoremissing`, a `%post --log=/root/post.log` header, `keyboard --vckeymap=us --xlayouts='fr'`. For the autoinstall fixture add `ethernets.eth0.mtu`, a `match`, `storage.layout.sizing-policy`, `apt.primary[0].arches`, and change `shutdown: reboot` → `shutdown: poweroff` (exercises the HA shutdown fix).
+- [ ] **Step 2: Add the structural assertion.** A helper tokenizes non-cosmetic lines (reuse the quote-aware split `/(?:[^\s"']+|"[^"]*"|'[^']*')+/g`; skip blank and `#`-only lines; treat `%`-section markers as tokens). NORMALIZE every token by stripping all quote chars: `const norm = (t: string): string => t.replace(/['"]/g, '')` — this makes `--xlayouts='fr'` and `--xlayouts=fr`, or `--vckeymap='us'` and `--vckeymap=us`, compare equal (the emitter re-quotes mapped values differently than the source). For each fixture build a SET of normalized re-emit tokens, then assert every normalized non-cosmetic ORIGINAL token is in that set — fail naming the first unaccounted token. Use a UNIQUE-SET subset check (`uniqueOriginal ⊆ uniqueReEmit`), NOT a multiset: the emitter legitimately de-duplicates redundant flags (e.g. `clearpart --all --all` → `clearpart --all`), which a multiset check would wrongly flag, whereas a dropped flag is a token absent from the re-emit set either way. Keep the existing idempotence, canonical-exact, and passthrough spot-check assertions.
 - [ ] **Step 3: Make it green.** Run `npx vitest run src/engines/import/corpus.test.ts`. Any unaccounted token is a real drop — fix it in HK/HA (capture it), never weaken the assertion. If a token genuinely cannot round-trip end-to-end and capturing it is out of scope, remove that one construct from the fixture and log the limitation in a code comment + the report.
 - [ ] **Step 4: Full gate.** `npx vitest run && npx tsc --noEmit && npx biome check . && npx vitest run --coverage` (engines/utils ≥75%).
 - [ ] **Step 5: Commit** `test(import): structural nothing-dropped corpus assertion + enriched fixtures`
