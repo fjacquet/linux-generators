@@ -202,7 +202,17 @@ export function parseAutoinstall(text: string): ParseResult {
     if (isObj(net.ethernets)) {
       const interfaces = parseEthernets(net.ethernets, diagnostics)
       if (interfaces.length > 0) spec.network.interfaces = interfaces
-      consume('network', 'ethernets')
+      // Consume only the leaves we mapped; unmodeled keys (mtu, match, dhcp6,
+      // nameservers.search, etc.) survive in extraKeys.
+      // NOTE: we intentionally do NOT consume 'routes' — if gateway4 is present it
+      // wins; on re-emit the emitter emits gateway4 + deepMerge puts routes back;
+      // re-parse maps gateway4→gateway and keeps routes in extraKeys → stable.
+      for (const device of Object.keys(net.ethernets)) {
+        consume('network', 'ethernets', device, 'dhcp4')
+        consume('network', 'ethernets', device, 'addresses')
+        consume('network', 'ethernets', device, 'gateway4')
+        consume('network', 'ethernets', device, 'nameservers', 'addresses')
+      }
       mapped++
     }
     if ('version' in net) consume('network', 'version')
@@ -217,7 +227,9 @@ export function parseAutoinstall(text: string): ParseResult {
         spec.storage.encryption.enabled = true
         spec.storage.encryption.passphrase = encPass
       }
-      consume('storage', 'layout')
+      // Consume only the leaves we mapped; unmodeled keys (sizing-policy, etc.) survive in extraKeys.
+      consume('storage', 'layout', 'name')
+      consume('storage', 'layout', 'password')
       mapped++
     }
     // storage.config → manual partitioning passthrough (round-trips via toYaml/fromYaml)
@@ -230,17 +242,27 @@ export function parseAutoinstall(text: string): ParseResult {
   }
 
   // apt.primary[0].uri → spec.packages.aptMirror
-  if (isObj(ai.apt)) {
-    const apt = ai.apt
-    if (Array.isArray(apt.primary)) {
-      const first = apt.primary[0]
-      if (isObj(first)) {
-        const uri = asString(first.uri)
-        if (uri) spec.packages.aptMirror = uri
-      }
-      consume('apt', 'primary')
-      mapped++
+  // deleteLeaf cannot recurse into arrays, so prune the mapped leaf on `extra` by hand.
+  // A custom `arches` on the primary mirror is preserved in extraKeys, but due to
+  // deepMerge array-replace the emitter's default arches:[default] wins on re-emit —
+  // acceptable known edge; `uri` round-trips correctly.
+  if (isObj(ai.apt) && Array.isArray(ai.apt.primary)) {
+    const first = ai.apt.primary[0]
+    if (isObj(first)) {
+      const uri = asString(first.uri)
+      if (uri) spec.packages.aptMirror = uri
     }
+    const extraApt = extra.apt
+    if (isObj(extraApt) && Array.isArray(extraApt.primary)) {
+      const extraFirst = extraApt.primary[0]
+      if (isObj(extraFirst)) {
+        delete extraFirst.uri
+        if (Object.keys(extraFirst).length === 0) extraApt.primary.shift()
+      }
+      if (extraApt.primary.length === 0) delete extraApt.primary
+      if (Object.keys(extraApt).length === 0) delete extra.apt
+    }
+    mapped++
   }
 
   if (Array.isArray(ai.packages)) {
@@ -267,10 +289,8 @@ export function parseAutoinstall(text: string): ParseResult {
     mapped++
   }
 
-  if ('shutdown' in ai) {
-    consume('shutdown')
-    mapped++
-  }
+  // `shutdown` is NOT consumed — it survives into extraKeys and is passed through
+  // by the emitter, so custom values (e.g. 'poweroff') round-trip correctly.
 
   spec.passthrough.autoinstall.extraKeys = extra
   const passthroughCount = Object.keys(extra).length

@@ -140,9 +140,9 @@ export function emitAutoinstall(spec: InstallSpec): EmitResult {
       })
     }
   }
-  autoinstall.shutdown = 'reboot'
-
   const extraKeys = spec.passthrough.autoinstall.extraKeys
+  // Fall back to 'reboot' only when extraKeys carries no custom shutdown value.
+  autoinstall.shutdown = (extraKeys.shutdown as string) ?? 'reboot'
   const merged = Object.keys(extraKeys).length > 0 ? deepMerge(autoinstall, extraKeys) : autoinstall
 
   const stamp = spec.meta.buildStamp ? `# build-stamp: ${spec.meta.buildStamp}\n` : ''

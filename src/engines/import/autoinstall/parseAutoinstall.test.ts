@@ -1,5 +1,7 @@
 // src/engines/import/autoinstall/parseAutoinstall.test.ts
 import { describe, expect, it } from 'vitest'
+import { emitAutoinstall } from '../../emit/autoinstall/emitAutoinstall'
+import { freshDefaultSpec } from '../../model'
 import { parseAutoinstall } from './parseAutoinstall'
 
 const UD = `#cloud-config
@@ -132,6 +134,108 @@ describe('parseAutoinstall', () => {
     // ssh.install-server NOT consumed — survives in extraKeys
     const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
     expect((extra.ssh as Record<string, unknown>)?.['install-server']).toBe(false)
+  })
+
+  it('ethernets: preserves unmodeled mtu/match in extraKeys, mapped fields round-trip', () => {
+    const ud = `#cloud-config
+autoinstall:
+  version: 1
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        dhcp4: true
+        mtu: 1400
+        match:
+          macaddress: '00:11:22:33:44:55'
+`
+    const { spec } = parseAutoinstall(ud)
+    const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const eth0 = (extra.network as Record<string, unknown>)?.ethernets as Record<string, unknown>
+    const eth0Obj = eth0?.eth0 as Record<string, unknown>
+    expect(eth0Obj?.mtu).toBe(1400)
+    expect(eth0Obj?.match).toEqual({ macaddress: '00:11:22:33:44:55' })
+    // dhcp4 consumed — not in extraKeys
+    expect(eth0Obj?.dhcp4).toBeUndefined()
+    // round-trip: emit → re-parse → same extraKeys
+    const yaml2 = emitAutoinstall(spec).files[0]?.content ?? ''
+    const { spec: spec2 } = parseAutoinstall(yaml2)
+    const extra2 = spec2.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const eth0B = (extra2.network as Record<string, unknown>)?.ethernets as Record<string, unknown>
+    expect((eth0B?.eth0 as Record<string, unknown>)?.mtu).toBe(1400)
+    expect(spec2.network.interfaces[0]?.mode).toBe('dhcp')
+  })
+
+  it('storage.layout: preserves unmodeled sizing-policy in extraKeys, scheme maps correctly', () => {
+    const ud = `#cloud-config
+autoinstall:
+  version: 1
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+`
+    const { spec } = parseAutoinstall(ud)
+    expect(spec.storage.scheme).toBe('autopart-lvm')
+    const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const layout = (extra.storage as Record<string, unknown>)?.layout as Record<string, unknown>
+    expect(layout?.['sizing-policy']).toBe('all')
+    // layout.name consumed — not in extraKeys
+    expect(layout?.name).toBeUndefined()
+    // round-trip
+    const yaml2 = emitAutoinstall(spec).files[0]?.content ?? ''
+    const { spec: spec2 } = parseAutoinstall(yaml2)
+    const extra2 = spec2.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const layout2 = (extra2.storage as Record<string, unknown>)?.layout as Record<string, unknown>
+    expect(layout2?.['sizing-policy']).toBe('all')
+    expect(spec2.storage.scheme).toBe('autopart-lvm')
+  })
+
+  it('apt.primary: preserves arches in extraKeys, uri maps to aptMirror', () => {
+    const ud = `#cloud-config
+autoinstall:
+  version: 1
+  apt:
+    primary:
+      - uri: http://my.mirror.example.com/ubuntu
+        arches:
+          - amd64
+`
+    const { spec } = parseAutoinstall(ud)
+    expect(spec.packages.aptMirror).toBe('http://my.mirror.example.com/ubuntu')
+    const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    const primaryArr = (extra.apt as Record<string, unknown>)?.primary as unknown[]
+    expect(Array.isArray(primaryArr)).toBe(true)
+    expect((primaryArr?.[0] as Record<string, unknown>)?.arches).toEqual(['amd64'])
+    // uri consumed — not in extraKeys
+    expect((primaryArr?.[0] as Record<string, unknown>)?.uri).toBeUndefined()
+    // round-trip
+    const yaml2 = emitAutoinstall(spec).files[0]?.content ?? ''
+    const { spec: spec2 } = parseAutoinstall(yaml2)
+    expect(spec2.packages.aptMirror).toBe('http://my.mirror.example.com/ubuntu')
+  })
+
+  it('shutdown: custom value poweroff round-trips; default spec still emits reboot', () => {
+    const ud = `#cloud-config
+autoinstall:
+  version: 1
+  shutdown: poweroff
+`
+    const { spec } = parseAutoinstall(ud)
+    const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    expect(extra.shutdown).toBe('poweroff')
+    // emitter uses the extraKeys value
+    const yaml2 = emitAutoinstall(spec).files[0]?.content ?? ''
+    expect(yaml2).toContain('shutdown: poweroff')
+    expect(yaml2).not.toContain('shutdown: reboot')
+    // idempotent: re-parse still has shutdown in extraKeys
+    const { spec: spec2 } = parseAutoinstall(yaml2)
+    const extra2 = spec2.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    expect(extra2.shutdown).toBe('poweroff')
+    // default spec (empty extraKeys) still emits reboot
+    const defaultSpec = freshDefaultSpec()
+    const defaultOut = emitAutoinstall(defaultSpec).files[0]?.content ?? ''
+    expect(defaultOut).toContain('shutdown: reboot')
   })
 
   it('out-of-range prefix /99 falls back to 24 and emits a warning (does not reject)', () => {
