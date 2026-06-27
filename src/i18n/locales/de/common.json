@@ -86,6 +86,15 @@
     "title": "Diagnose",
     "none": "Keine Probleme — sieht gültig aus."
   },
+  "profile": {
+    "preset": "Vorlage",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "autosave": "Entwurf lokal speichern",
+    "imported": "Profil importiert",
+    "importError": "Profil konnte nicht importiert werden",
+    "presetLoaded": "Vorlage geladen"
+  },
   "actions": {
     "reset": "Zurücksetzen"
   },
