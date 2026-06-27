@@ -30,6 +30,50 @@ autoinstall:
   shutdown: reboot
 `
 
+const UD_EXTENDED = `#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: UTC
+  identity:
+    hostname: web01
+    username: admin
+  ssh:
+    install-server: false
+    allow-pw: true
+    authorized-keys:
+      - ssh-ed25519 AAAA admin@host
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        addresses:
+          - 10.0.0.5/24
+        routes:
+          - to: default
+            via: 10.0.0.1
+        nameservers:
+          addresses:
+            - 8.8.8.8
+            - 8.8.4.4
+  apt:
+    primary:
+      - arches:
+          - default
+        uri: http://archive.ubuntu.com/ubuntu
+  storage:
+    config:
+      - id: disk0
+        type: disk
+        ptable: gpt
+  user-data:
+    runcmd:
+      - echo hello
+  shutdown: reboot
+`
+
 describe('parseAutoinstall', () => {
   it('maps known keys into the spec', () => {
     const { spec } = parseAutoinstall(UD)
@@ -59,5 +103,34 @@ describe('parseAutoinstall', () => {
 
   it('throws on malformed YAML', () => {
     expect(() => parseAutoinstall('#cloud-config\nautoinstall:\n  : : :\n')).toThrow()
+  })
+
+  it('maps network.ethernets, apt.primary, storage.config, user-data; keeps ssh.install-server in extraKeys', () => {
+    const { spec } = parseAutoinstall(UD_EXTENDED)
+
+    // network.ethernets → static interface
+    expect(spec.network.interfaces).toHaveLength(1)
+    const iface = spec.network.interfaces[0]
+    expect(iface?.device).toBe('eth0')
+    expect(iface?.mode).toBe('static')
+    expect(iface?.ip).toBe('10.0.0.5')
+    expect(iface?.prefix).toBe(24)
+    expect(iface?.gateway).toBe('10.0.0.1')
+    expect(iface?.nameservers).toContain('8.8.8.8')
+    expect(iface?.nameservers).toContain('8.8.4.4')
+
+    // apt.primary[0].uri → aptMirror
+    expect(spec.packages.aptMirror).toBe('http://archive.ubuntu.com/ubuntu')
+
+    // storage.config → manual scheme + rawAutoinstallStorage passthrough
+    expect(spec.storage.scheme).toBe('manual')
+    expect(spec.scripts.rawAutoinstallStorage.trim()).not.toBe('')
+
+    // user-data → rawAutoinstallUserData passthrough
+    expect(spec.scripts.rawAutoinstallUserData.trim()).not.toBe('')
+
+    // ssh.install-server NOT consumed — survives in extraKeys
+    const extra = spec.passthrough.autoinstall.extraKeys as Record<string, unknown>
+    expect((extra.ssh as Record<string, unknown>)?.['install-server']).toBe(false)
   })
 })
