@@ -192,6 +192,18 @@ content) are kept distinct so re-export never confuses the two.
   `extraKeys`; a parent object is removed only once it has been emptied of all children. This is what makes
   partial consumption of a key (e.g. `identity`, `ssh`) safe.
 
+### Version resilience (24.04 → 26.04 and beyond)
+
+Autoinstall is still `version: 1` in 26.04 (no v2 exists), and 26.04's changes are **behavioral** (the user
+account is created earlier in the install, OEM/HWE metapackages install on Server, crash reporting for
+early/late-commands was quieted) — **not** schema-breaking. The format's full top-level key set is far
+larger than the ~14 we model — `interactive-sections, refresh-installer, source, proxy, active-directory,
+ubuntu-pro, codecs, drivers, oem, snaps, debconf-selections, kernel, kernel-crash-dumps, updates,
+error-commands, reporting, zdevs`, etc. Every key we do **not** model lands in `extraKeys` verbatim, so a
+26.04 file round-trips losslessly with no new handlers. `target.version` is a free string, so `26.04`
+needs no schema change, and `quirksFor` already treats `≥24.04` uniformly. (Adding `26.04` to the UI's
+Ubuntu version list is a one-line cosmetic follow-up, independent of import.)
+
 ## Fidelity proof (`roundTrip.ts` + `utils/diff.ts`)
 
 - `roundTrip(originalText, spec, format)` re-emits via the existing `emit`, then compares. A small pure LCS
