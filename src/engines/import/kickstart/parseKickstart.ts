@@ -85,7 +85,27 @@ export function parseKickstart(text: string): ParseResult {
         spec.scripts.rawKickstartPre = node.body
         mapped++
       } else if (header.startsWith('%post')) {
-        spec.scripts.rawKickstartPost = node.body
+        // Strip emitter-generated ssh-hardening sed lines so they are not duplicated
+        // on re-emit. The two patterns exactly match sshHardeningPost() output.
+        const permitRootLoginRe =
+          /^sed -i 's\/\^#\\\?PermitRootLogin\.\*\/PermitRootLogin (yes|no)\/' \/etc\/ssh\/sshd_config$/
+        const passwordAuthRe =
+          /^sed -i 's\/\^#\\\?PasswordAuthentication\.\*\/PasswordAuthentication (yes|no)\/' \/etc\/ssh\/sshd_config$/
+        const remaining: string[] = []
+        for (const line of node.body.split('\n')) {
+          const permitMatch = line.match(permitRootLoginRe)
+          if (permitMatch) {
+            spec.security.sshHardening.permitRootLogin = (permitMatch[1] ?? 'no') === 'yes'
+            continue
+          }
+          const passwordMatch = line.match(passwordAuthRe)
+          if (passwordMatch) {
+            spec.security.sshHardening.passwordAuth = (passwordMatch[1] ?? 'no') === 'yes'
+            continue
+          }
+          remaining.push(line)
+        }
+        spec.scripts.rawKickstartPost = remaining.join('\n').trim()
         mapped++
       } else {
         spec.passthrough.kickstart.extraSections.push({ header, body: node.body })
@@ -106,6 +126,8 @@ export function parseKickstart(text: string): ParseResult {
       case 'firstboot':
       case 'cmdline':
       case 'graphical':
+      case 'bootloader':
+      case 'services':
         mapped++ // emit constants — recognized and dropped
         break
       case 'lang':
@@ -241,6 +263,42 @@ export function parseKickstart(text: string): ParseResult {
         )
         mapped++
         break
+      case 'user': {
+        const username = flagVal(flags, 'name')
+        if (username) spec.identity.primaryUser.name = username
+        const gecos = flagVal(flags, 'gecos')
+        if (gecos) spec.identity.primaryUser.gecos = gecos
+        const groupsVal = flagVal(flags, 'groups')
+        if (groupsVal) spec.identity.primaryUser.groups = groupsVal.split(',').filter(Boolean)
+        if (hasFlag(flags, 'iscrypted')) {
+          spec.identity.primaryUser.passwordMode = 'hashed'
+          spec.identity.primaryUser.passwordCrypt = flagVal(flags, 'password') ?? ''
+        }
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter(
+            (f) => !['name', 'gecos', 'groups', 'iscrypted', 'password'].includes(f.key),
+          ),
+        )
+        mapped++
+        break
+      }
+      case 'sshkey': {
+        const sshUsername = flagVal(flags, 'username')
+        const key = positionals[0]
+        if (key) {
+          if (sshUsername === 'root') spec.identity.rootSshKeys.push(key)
+          else spec.identity.primaryUser.sshKeys.push(key)
+        }
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => f.key !== 'username'),
+        )
+        mapped++
+        break
+      }
       default:
         spec.passthrough.kickstart.extraCommands.push(raw)
     }

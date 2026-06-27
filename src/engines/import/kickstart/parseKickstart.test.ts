@@ -127,4 +127,58 @@ describe('parseKickstart', () => {
     const { spec } = parseKickstart(original)
     expect(roundTrip(original, spec, 'kickstart').fidelity).not.toBe('lossy')
   })
+
+  it('idempotent: import(emit(import(emit(default-spec)))) is a fixed point', () => {
+    const original = emitKickstart(freshDefaultSpec()).files[0]?.content ?? ''
+    const s1 = parseKickstart(original).spec
+    const s2 = parseKickstart(emitKickstart(s1).files[0]?.content ?? '').spec
+    expect(s2).toEqual(s1)
+  })
+
+  it('maps user directive into primaryUser fields', () => {
+    const ks = 'user --name=admin --groups=wheel,kvm --iscrypted --password=$6$x\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.identity.primaryUser.name).toBe('admin')
+    expect(spec.identity.primaryUser.groups).toEqual(['wheel', 'kvm'])
+    expect(spec.identity.primaryUser.passwordMode).toBe('hashed')
+    expect(spec.identity.primaryUser.passwordCrypt).toBe('$6$x')
+    expect(spec.passthrough.kickstart.extraCommands.some((c) => c.startsWith('user'))).toBe(false)
+  })
+
+  it('maps sshkey --username=root into rootSshKeys', () => {
+    const ks = 'sshkey --username=root "ssh-ed25519 AAA"\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.identity.rootSshKeys).toContain('ssh-ed25519 AAA')
+    expect(spec.passthrough.kickstart.extraCommands.some((c) => c.startsWith('sshkey'))).toBe(false)
+  })
+
+  it('maps sshkey for non-root username into primaryUser.sshKeys', () => {
+    const ks = 'sshkey --username=admin "ssh-ed25519 BBB"\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.identity.primaryUser.sshKeys).toContain('ssh-ed25519 BBB')
+  })
+
+  it('strips %post hardening lines and preserves remaining content', () => {
+    const ks = `%post
+sed -i 's/^#\\?PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+echo hi
+%end
+`
+    const { spec } = parseKickstart(ks)
+    expect(spec.security.sshHardening.permitRootLogin).toBe(true)
+    expect(spec.security.sshHardening.passwordAuth).toBe(false)
+    expect(spec.scripts.rawKickstartPost).toBe('echo hi')
+  })
+
+  it('does not route bootloader or services into extraCommands', () => {
+    const ks = 'bootloader --location=mbr\nservices --enabled=sshd,chronyd\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.passthrough.kickstart.extraCommands.some((c) => c.startsWith('bootloader'))).toBe(
+      false,
+    )
+    expect(spec.passthrough.kickstart.extraCommands.some((c) => c.startsWith('services'))).toBe(
+      false,
+    )
+  })
 })
