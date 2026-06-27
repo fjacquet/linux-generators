@@ -1,12 +1,78 @@
 import type { InstallSpec } from '../../model/installSpec'
 
-// TODO(T4): assemble ONE `d-i preseed/late_command string …` from `;`-joined
-// steps: (1) user .ssh/authorized_keys (+ root keys when rootPolicy=sshkey),
-// (2) sshd hardening sed, (3) ufw (DEBIAN_FRONTEND=noninteractive apt + allow +
-// enable) when firewall enabled, (4) AppArmor when non-default, (5)
-// scripts.lateCommands rewritten `curtin in-target -- ` → `in-target `. File
-// writes target /target/…; in-system commands prefixed `in-target`. Returns []
-// when nothing applies.
-export function buildLateCommand(_spec: InstallSpec): string[] {
-  return []
+// Pure helpers — each returns the ordered shell fragments for its section.
+// Fragments are joined with '; ' and wrapped in a single d-i late_command line.
+
+function userSshFragments(spec: InstallSpec): string[] {
+  const u = spec.identity.primaryUser
+  if (u.sshKeys.length === 0) return []
+  return [
+    `mkdir -p /target/home/${u.name}/.ssh`,
+    ...u.sshKeys.map((k) => `echo "${k}" >> /target/home/${u.name}/.ssh/authorized_keys`),
+    `in-target chown -R ${u.name}:${u.name} /home/${u.name}/.ssh`,
+    `chmod 700 /target/home/${u.name}/.ssh`,
+    `chmod 600 /target/home/${u.name}/.ssh/authorized_keys`,
+  ]
+}
+
+function rootSshFragments(spec: InstallSpec): string[] {
+  if (spec.identity.rootPolicy !== 'sshkey' || spec.identity.rootSshKeys.length === 0) return []
+  return [
+    'mkdir -p /target/root/.ssh',
+    ...spec.identity.rootSshKeys.map((k) => `echo "${k}" >> /target/root/.ssh/authorized_keys`),
+    'chmod 700 /target/root/.ssh',
+    'chmod 600 /target/root/.ssh/authorized_keys',
+  ]
+}
+
+function sshdHardeningFragments(spec: InstallSpec): string[] {
+  const h = spec.security.sshHardening
+  const frags: string[] = []
+  if (!h.permitRootLogin)
+    frags.push("sed -i 's/^#\\?PermitRootLogin.*/PermitRootLogin no/' /target/etc/ssh/sshd_config")
+  if (!h.passwordAuth)
+    frags.push(
+      "sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication no/' /target/etc/ssh/sshd_config",
+    )
+  return frags
+}
+
+function firewallFragments(spec: InstallSpec): string[] {
+  if (!spec.security.firewall.enabled) return []
+  return [
+    'in-target env DEBIAN_FRONTEND=noninteractive apt-get install -y ufw',
+    ...spec.security.firewall.services.map((svc) => `in-target ufw allow ${svc}`),
+    'in-target ufw --force enable',
+  ]
+}
+
+function apparmorFragments(spec: InstallSpec): string[] {
+  if (spec.security.apparmor === 'enforce') return []
+  if (spec.security.apparmor === 'complain')
+    return [
+      'in-target env DEBIAN_FRONTEND=noninteractive apt-get install -y apparmor-utils',
+      'in-target aa-complain /etc/apparmor.d/*',
+    ]
+  // 'disabled'
+  return ['in-target systemctl disable apparmor']
+}
+
+const CURTIN_PREFIX = 'curtin in-target -- '
+
+function lateCommandFragments(spec: InstallSpec): string[] {
+  return spec.scripts.lateCommands.map((c) =>
+    c.startsWith(CURTIN_PREFIX) ? `in-target ${c.slice(CURTIN_PREFIX.length)}` : c,
+  )
+}
+
+export function buildLateCommand(spec: InstallSpec): string[] {
+  const fragments = [
+    ...userSshFragments(spec),
+    ...rootSshFragments(spec),
+    ...sshdHardeningFragments(spec),
+    ...firewallFragments(spec),
+    ...apparmorFragments(spec),
+    ...lateCommandFragments(spec),
+  ]
+  return fragments.length === 0 ? [] : [`d-i preseed/late_command string ${fragments.join('; ')}`]
 }
