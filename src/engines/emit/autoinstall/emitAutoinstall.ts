@@ -1,3 +1,4 @@
+import { deepMerge } from '../../../utils/deepMerge'
 import type { InstallSpec } from '../../model/installSpec'
 import type { Diagnostic } from '../../types'
 import type { EmitResult } from '../types'
@@ -139,8 +140,11 @@ export function emitAutoinstall(spec: InstallSpec): EmitResult {
   }
   autoinstall.shutdown = 'reboot'
 
+  const extraKeys = spec.passthrough.autoinstall.extraKeys
+  const merged = Object.keys(extraKeys).length > 0 ? deepMerge(autoinstall, extraKeys) : autoinstall
+
   const stamp = spec.meta.buildStamp ? `# build-stamp: ${spec.meta.buildStamp}\n` : ''
-  const content = `#cloud-config\n${stamp}${toYaml({ autoinstall })}`
+  const content = `#cloud-config\n${stamp}${toYaml({ autoinstall: merged })}`
 
   return {
     files: [{ filename: 'user-data', content, language: 'yaml' }],
