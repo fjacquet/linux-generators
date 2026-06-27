@@ -97,7 +97,7 @@
   "profile": {
     "preset": "Preset",
     "export": "Esporta",
-    "import": "Importa",
+    "import": "Importa profilo (JSON)",
     "autosave": "Salva bozza localmente",
     "imported": "Profilo importato",
     "importError": "Impossibile importare il profilo",
@@ -111,5 +111,26 @@
   },
   "lang": {
     "label": "Lingua"
+  },
+  "import": {
+    "open": "Importa file di installazione…",
+    "paste": "Incolla un file kickstart o autoinstall",
+    "placeholder": "Incolla ks.cfg o user-data qui…",
+    "parse": "Analizza",
+    "chooseFile": "Scegli file",
+    "close": "Chiudi",
+    "confirm": "Conferma e carica",
+    "cancel": "Indietro",
+    "success": "File di installazione importato",
+    "mapped": "{{count}} impostazioni mappate",
+    "preserved": "{{count}} mantenute alla lettera",
+    "verbatimNote": "I commenti nelle sezioni %pre/%post/%addon e le chiavi non modellate sono preservati esattamente; solo i commenti sulle singole direttive note vengono rimossi (visibili nel diff).",
+    "lossyNote": "Alcune direttive sono state riformattate o non è stato possibile riprodurle fedelmente — controlla il diff qui sotto prima di confermare.",
+    "fileError": "Impossibile leggere il file",
+    "fidelity": {
+      "exact": "Esatto",
+      "semantic": "Semantico",
+      "lossy": "Con perdita"
+    }
   }
 }

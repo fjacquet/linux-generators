@@ -97,7 +97,7 @@
   "profile": {
     "preset": "Preset",
     "export": "Export",
-    "import": "Import",
+    "import": "Import profile (JSON)",
     "autosave": "Save draft locally",
     "imported": "Profile imported",
     "importError": "Could not import profile",
@@ -111,5 +111,26 @@
   },
   "lang": {
     "label": "Language"
+  },
+  "import": {
+    "open": "Import install file…",
+    "paste": "Paste a kickstart or autoinstall file",
+    "placeholder": "Paste ks.cfg or user-data here…",
+    "parse": "Parse",
+    "chooseFile": "Choose file",
+    "close": "Close",
+    "confirm": "Confirm & load",
+    "cancel": "Back",
+    "success": "Install file imported",
+    "mapped": "Mapped {{count}} settings",
+    "preserved": "Preserved {{count}} verbatim",
+    "verbatimNote": "Comments inside %pre/%post/%addon sections and un-modeled keys are preserved exactly; only comments on individual known directives are dropped (shown in the diff).",
+    "lossyNote": "Some directives were reformatted or could not be reproduced exactly — review the diff below before confirming.",
+    "fileError": "Could not read file",
+    "fidelity": {
+      "exact": "Exact",
+      "semantic": "Semantic",
+      "lossy": "Lossy"
+    }
   }
 }

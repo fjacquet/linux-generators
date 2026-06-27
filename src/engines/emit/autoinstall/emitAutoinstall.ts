@@ -1,3 +1,4 @@
+import { deepMerge } from '../../../utils/deepMerge'
 import type { InstallSpec } from '../../model/installSpec'
 import type { Diagnostic } from '../../types'
 import type { EmitResult } from '../types'
@@ -102,7 +103,9 @@ export function emitAutoinstall(spec: InstallSpec): EmitResult {
     identity: {
       hostname: spec.network.hostname,
       username: primaryUser.name,
-      realname: primaryUser.gecos || primaryUser.name,
+      // Only emit realname when explicitly set; omitting it avoids injecting
+      // the username as gecos on re-import (idempotence invariant).
+      ...(primaryUser.gecos ? { realname: primaryUser.gecos } : {}),
       password,
     },
     ssh: {
@@ -137,10 +140,13 @@ export function emitAutoinstall(spec: InstallSpec): EmitResult {
       })
     }
   }
-  autoinstall.shutdown = 'reboot'
+  const extraKeys = spec.passthrough.autoinstall.extraKeys
+  // Fall back to 'reboot' only when extraKeys carries no custom shutdown value.
+  autoinstall.shutdown = typeof extraKeys.shutdown === 'string' ? extraKeys.shutdown : 'reboot'
+  const merged = Object.keys(extraKeys).length > 0 ? deepMerge(autoinstall, extraKeys) : autoinstall
 
   const stamp = spec.meta.buildStamp ? `# build-stamp: ${spec.meta.buildStamp}\n` : ''
-  const content = `#cloud-config\n${stamp}${toYaml({ autoinstall })}`
+  const content = `#cloud-config\n${stamp}${toYaml({ autoinstall: merged })}`
 
   return {
     files: [{ filename: 'user-data', content, language: 'yaml' }],

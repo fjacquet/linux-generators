@@ -1,0 +1,42 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: ch
+    variant: fr
+  timezone: Europe/Zurich
+  identity:
+    hostname: web01
+    username: admin
+    password: $6$abc$def
+    shell: /bin/zsh
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      - ssh-ed25519 AAAA admin@host
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        dhcp4: true
+        mtu: 1400
+        match:
+          macaddress: '00:11:22:33:44:55'
+  storage:
+    layout:
+      name: lvm
+      sizing-policy: all
+  packages:
+    - vim
+  snaps:
+    install:
+      - name: microk8s
+  oem:
+    install: auto
+  late-commands:
+    - curtin in-target -- systemctl enable foo
+  # apt.primary[0].arches is KNOWN non-round-trippable (deepMerge array-replace makes
+  # the emitter's default arches:['default'] win on re-emit); only uri round-trips.
+  shutdown: poweroff

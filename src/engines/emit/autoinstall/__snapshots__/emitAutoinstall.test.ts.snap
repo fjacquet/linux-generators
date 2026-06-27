@@ -12,7 +12,6 @@ autoinstall:
   identity:
     hostname: localhost.localdomain
     username: admin
-    realname: admin
     password: "!"
   ssh:
     install-server: true
@@ -42,7 +41,6 @@ autoinstall:
   identity:
     hostname: localhost.localdomain
     username: admin
-    realname: admin
     password: "!"
   ssh:
     install-server: true
@@ -69,7 +67,6 @@ autoinstall:
   identity:
     hostname: web01
     username: admin
-    realname: admin
     password: "!"
   ssh:
     install-server: true

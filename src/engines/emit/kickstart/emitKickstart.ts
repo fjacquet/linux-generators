@@ -1,12 +1,14 @@
 import type { InstallSpec } from '../../model/installSpec'
 import type { EmitResult } from '../types'
+import { applyUnknownFlags, extraSectionBlocks } from './passthrough'
 import {
-  bootloaderLine,
+  constantLine,
   identityLines,
   ksBlock,
   localeLines,
   networkLines,
   packagesBlock,
+  SLOT_DEFAULTS,
   securityLines,
   sourceLines,
   sshHardeningPost,
@@ -26,31 +28,47 @@ export function emitKickstart(spec: InstallSpec): EmitResult {
     ...(spec.meta.buildStamp ? [`# build-stamp: ${spec.meta.buildStamp}`] : []),
   ]
 
-  const commands = [
-    'text',
-    ...sourceLines(spec),
-    ...localeLines(spec),
-    ...networkLines(spec),
-    ...identityLines(spec),
-    ...storageLines(spec),
-    bootloaderLine(spec),
-    ...securityLines(spec),
-    'firstboot --disable',
-    'reboot',
-  ]
+  const ks = spec.passthrough.kickstart
+  const storage = ks.rawStorage.length > 0 ? ks.rawStorage : storageLines(spec)
 
-  const pre = ksBlock('%pre --log=/var/log/ks-pre.log', [
+  const commands = applyUnknownFlags(
+    [
+      constantLine(spec, 'mode', SLOT_DEFAULTS.mode),
+      ...sourceLines(spec),
+      ...localeLines(spec),
+      ...networkLines(spec),
+      ...identityLines(spec),
+      ...storage,
+      constantLine(spec, 'bootloader', SLOT_DEFAULTS.bootloader),
+      ...securityLines(spec),
+      ...ks.extraCommands,
+      constantLine(spec, 'firstboot', SLOT_DEFAULTS.firstboot),
+      constantLine(spec, 'power', SLOT_DEFAULTS.power),
+    ],
+    ks.unknownFlags,
+  )
+
+  const pre = ksBlock(ks.preHeader || '%pre --log=/var/log/ks-pre.log', [
     ...spec.scripts.pre,
     ...splitRaw(spec.scripts.rawKickstartPre),
   ])
 
-  const post = ksBlock('%post --log=/var/log/ks-post.log', [
+  const post = ksBlock(ks.postHeader || '%post --log=/var/log/ks-post.log', [
     ...sshHardeningPost(spec),
     ...spec.scripts.post,
     ...splitRaw(spec.scripts.rawKickstartPost),
   ])
 
-  const content = `${[...header, ...commands, '', ...packagesBlock(spec), '', ...pre, ...post]
+  const content = `${[
+    ...header,
+    ...commands,
+    '',
+    ...packagesBlock(spec),
+    '',
+    ...pre,
+    ...post,
+    ...extraSectionBlocks(ks.extraSections),
+  ]
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trimEnd()}\n`

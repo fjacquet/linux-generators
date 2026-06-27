@@ -97,7 +97,7 @@
   "profile": {
     "preset": "Vorlage",
     "export": "Exportieren",
-    "import": "Importieren",
+    "import": "Profil importieren (JSON)",
     "autosave": "Entwurf lokal speichern",
     "imported": "Profil importiert",
     "importError": "Profil konnte nicht importiert werden",
@@ -111,5 +111,26 @@
   },
   "lang": {
     "label": "Sprache"
+  },
+  "import": {
+    "open": "Installationsdatei importieren…",
+    "paste": "Kickstart- oder Autoinstall-Datei einfügen",
+    "placeholder": "ks.cfg oder user-data hier einfügen…",
+    "parse": "Analysieren",
+    "chooseFile": "Datei wählen",
+    "close": "Schließen",
+    "confirm": "Bestätigen & laden",
+    "cancel": "Zurück",
+    "success": "Installationsdatei importiert",
+    "mapped": "{{count}} Einstellungen zugeordnet",
+    "preserved": "{{count}} unverändert übernommen",
+    "verbatimNote": "Kommentare in %pre/%post/%addon-Abschnitten und nicht modellierte Schlüssel bleiben exakt erhalten; nur Kommentare an einzelnen bekannten Direktiven entfallen (im Diff sichtbar).",
+    "lossyNote": "Einige Direktiven wurden umformatiert oder konnten nicht exakt reproduziert werden — prüfen Sie das Diff unten vor dem Bestätigen.",
+    "fileError": "Datei konnte nicht gelesen werden",
+    "fidelity": {
+      "exact": "Exakt",
+      "semantic": "Semantisch",
+      "lossy": "Verlustbehaftet"
+    }
   }
 }
