@@ -10,10 +10,14 @@ export interface CrossFormatDrop {
   message: string
 }
 
-/** Order-insensitive set equality: same length and every element of `a` is in `b`.
- *  Robust to import/UI reordering — never compare collections via `.join(',')`. */
-const sameSet = (a: readonly string[], b: readonly string[]): boolean =>
-  a.length === b.length && a.every((x) => b.includes(x))
+/** Order- and duplicate-insensitive set equality: the two sides have the same
+ *  distinct members. Robust to import/UI reordering and repeated entries — never
+ *  compare collections via `.join(',')`. */
+const sameSet = (a: readonly string[], b: readonly string[]): boolean => {
+  const sa = new Set(a)
+  const sb = new Set(b)
+  return sa.size === sb.size && [...sa].every((x) => sb.has(x))
+}
 
 /**
  * The single source of truth for "warn-on-intent": a field is a drop ONLY when

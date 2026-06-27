@@ -53,9 +53,12 @@ describe('emitAutoinstall', () => {
     // minimalUbuntu keeps default SELinux/firewall and empty groups → no lost
     // intent, so the DiagnosticsList is not pre-populated with cross-format noise.
     const fields = emitAutoinstall(minimalUbuntu).diagnostics.map((d) => d.field)
+    // cover every autoinstall drop field so a regression on any can't slip through
     expect(fields).not.toContain('security.selinux')
     expect(fields).not.toContain('security.firewall')
     expect(fields).not.toContain('packages.groups')
+    expect(fields).not.toContain('packages.repos')
+    expect(fields).not.toContain('identity.rootPolicy')
   })
 
   it('warns when SELinux and a customized firewall diverge from default on Ubuntu', () => {

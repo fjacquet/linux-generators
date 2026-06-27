@@ -37,8 +37,9 @@ describe('emitKickstart', () => {
   })
 
   it('stays silent on a default RHEL spec (warn-on-intent)', () => {
+    // assert against the real default baseline (not a fixture that could drift):
     // default AppArmor 'enforce' carries no lost intent → no cross-format noise
-    const fields = emitKickstart(minimalRhel).diagnostics.map((d) => d.field)
+    const fields = emitKickstart(freshDefaultSpec()).diagnostics.map((d) => d.field)
     expect(fields).not.toContain('security.apparmor')
   })
 
