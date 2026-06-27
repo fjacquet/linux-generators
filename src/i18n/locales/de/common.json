@@ -126,6 +126,11 @@
     "preserved": "{{count}} unverändert übernommen",
     "verbatimNote": "Kommentare in %pre/%post/%addon-Abschnitten und nicht modellierte Schlüssel bleiben exakt erhalten; nur Kommentare an einzelnen bekannten Direktiven entfallen (im Diff sichtbar).",
     "lossyNote": "Einige Direktiven wurden umformatiert oder konnten nicht exakt reproduziert werden — prüfen Sie das Diff unten vor dem Bestätigen.",
-    "fileError": "Datei konnte nicht gelesen werden"
+    "fileError": "Datei konnte nicht gelesen werden",
+    "fidelity": {
+      "exact": "Exakt",
+      "semantic": "Semantisch",
+      "lossy": "Verlustbehaftet"
+    }
   }
 }

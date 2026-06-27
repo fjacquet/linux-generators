@@ -34,7 +34,7 @@ export function ImportReview({
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 text-sm">
         <span className={`rounded px-2 py-0.5 text-white ${BADGE[report.fidelity]}`}>
-          {report.fidelity}
+          {t(`import.fidelity.${report.fidelity}`)}
         </span>
         <span>
           {t('import.mapped', { count: report.mappedCount })} ·{' '}

@@ -39,7 +39,12 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
         aria-label={t('import.paste')}
         placeholder={t('import.placeholder')}
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value)
+          // Invalidate any prior parse so the review/confirm can never apply a
+          // stale result against text the user has since edited.
+          setResult(null)
+        }}
       />
       <div className="flex items-center gap-2">
         <button type="button" className="btn-primary" onClick={onParse}>
@@ -50,7 +55,7 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
           <input
             type="file"
             className="hidden"
-            accept=".cfg,.ks,.yaml,.yml,user-data,text/plain"
+            accept=".cfg,.ks,.yaml,.yml,text/plain"
             onChange={(e) => {
               const f = e.target.files?.[0]
               if (f) void onPickFile(f)

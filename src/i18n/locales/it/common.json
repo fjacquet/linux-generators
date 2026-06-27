@@ -126,6 +126,11 @@
     "preserved": "{{count}} mantenute alla lettera",
     "verbatimNote": "I commenti nelle sezioni %pre/%post/%addon e le chiavi non modellate sono preservati esattamente; solo i commenti sulle singole direttive note vengono rimossi (visibili nel diff).",
     "lossyNote": "Alcune direttive sono state riformattate o non è stato possibile riprodurle fedelmente — controlla il diff qui sotto prima di confermare.",
-    "fileError": "Impossibile leggere il file"
+    "fileError": "Impossibile leggere il file",
+    "fidelity": {
+      "exact": "Esatto",
+      "semantic": "Semantico",
+      "lossy": "Con perdita"
+    }
   }
 }

@@ -126,6 +126,11 @@
     "preserved": "Preserved {{count}} verbatim",
     "verbatimNote": "Comments inside %pre/%post/%addon sections and un-modeled keys are preserved exactly; only comments on individual known directives are dropped (shown in the diff).",
     "lossyNote": "Some directives were reformatted or could not be reproduced exactly — review the diff below before confirming.",
-    "fileError": "Could not read file"
+    "fileError": "Could not read file",
+    "fidelity": {
+      "exact": "Exact",
+      "semantic": "Semantic",
+      "lossy": "Lossy"
+    }
   }
 }

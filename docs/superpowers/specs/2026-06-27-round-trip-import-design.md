@@ -184,7 +184,8 @@ content) are kept distinct so re-export never confuses the two.
   authorized-keys→primaryUser.sshKeys, `storage.layout.name`→scheme (lvm→autopart-lvm, direct→autopart-plain)
   + password→encryption, `storage.config`→rawAutoinstallStorage, `network.ethernets`→interfaces,
   `packages`→individual, `apt.primary[].uri`→aptMirror, `early/late-commands`→scripts, `user-data`→
-  rawAutoinstallUserData, `shutdown`→dropped.
+  rawAutoinstallUserData. `shutdown` is **not** modeled but is preserved in `extraKeys` (not consumed),
+  so custom values like `poweroff` round-trip via the emitter's passthrough.
   Remainder rule (cleaner here): **deep-clone the parsed object, delete every path consumed at the *leaf*
   level, and whatever remains *is* `extraKeys`** — so `snaps:`, `oem:`, `kernel:`, unknown sub-keys all
   survive without enumerating them. Deletion is leaf-precise: consuming `identity.username` and

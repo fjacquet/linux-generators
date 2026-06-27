@@ -29,6 +29,11 @@ passthrough: {
     unknownFlags: { command: string; index: number; flags: string[] }[]
     extraSections: { header: string; body: string }[]
     rawStorage: string[]
+    // constant-directive slots + section headers, captured only when they differ from the emitter default
+    constantLines: Record<string, string>   // slot ('mode'|'bootloader'|'services'|'firstboot'|'power') → verbatim line
+    packagesHeader: string                   // default '%packages'
+    preHeader: string                        // default '%pre --log=/var/log/ks-pre.log'
+    postHeader: string                       // default '%post --log=/var/log/ks-post.log'
   }
   autoinstall: { extraKeys: Record<string, unknown> }
 }
@@ -149,6 +154,13 @@ const Passthrough = z.object({
       extraSections: z.array(z.object({ header: z.string(), body: z.string() })).default([]),
       // all-or-nothing storage: verbatim partitioning lines that REPLACE engine storage output
       rawStorage: z.array(z.string()).default([]),
+      // constant-directive slots ('mode'|'bootloader'|'services'|'firstboot'|'power'), captured
+      // only when the raw line differs from the emitter default (so minimal files stay idempotent)
+      constantLines: z.record(z.string(), z.string()).default({}),
+      // %packages/%pre/%post header lines (carry their flags verbatim)
+      packagesHeader: z.string().default('%packages'),
+      preHeader: z.string().default('%pre --log=/var/log/ks-pre.log'),
+      postHeader: z.string().default('%post --log=/var/log/ks-post.log'),
     })
     .prefault({}),
   autoinstall: z
@@ -1692,7 +1704,7 @@ git commit -m "feat(import): importFile orchestrator + public barrel"
 
 - [ ] **Step 1: Add the fixtures**
 
-```
+```kickstart
 # src/__fixtures__/importCorpus/rhel-complex.ks
 # complex RHEL kickstart with un-modeled constructs
 text
@@ -1723,7 +1735,7 @@ echo configured
 %end
 ```
 
-```
+```yaml
 # src/__fixtures__/importCorpus/ubuntu-complex.user-data
 #cloud-config
 autoinstall:
