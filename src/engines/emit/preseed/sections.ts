@@ -1,4 +1,5 @@
 import type { InstallSpec } from '../../model/installSpec'
+import { prefixToNetmask } from '../kickstart/sections'
 
 // Per-area helpers for the Debian Preseed emitter. Each returns an array of
 // `d-i <owner>/<question> <type> <value>` directive lines (empty = nothing to
@@ -14,37 +15,131 @@ export function localeLines(spec: InstallSpec): string[] {
   ]
 }
 
-// TODO(T3): map spec.network (hostname → get_hostname/get_domain; interfaces[0]
-// dhcp → choose_interface auto; static → disable_autoconfig + get_ipaddress /
-// get_netmask (prefixToNetmask) / get_gateway / get_nameservers SPACE-joined +
-// confirm_static).
-export function networkLines(_spec: InstallSpec): string[] {
-  return []
+export function networkLines(spec: InstallSpec): string[] {
+  const [host, domain] = spec.network.hostname.split(/\.(.+)/)
+  const out: string[] = [`d-i netcfg/get_hostname string ${host}`]
+  if (domain) out.push(`d-i netcfg/get_domain string ${domain}`)
+
+  const iface = spec.network.interfaces[0]
+  if (!iface) return out
+
+  const sel = iface.device === 'link' ? 'auto' : iface.device
+  out.push(`d-i netcfg/choose_interface select ${sel}`)
+
+  if (iface.mode === 'static') {
+    out.push('d-i netcfg/disable_autoconfig boolean true')
+    out.push(`d-i netcfg/get_ipaddress string ${iface.ip}`)
+    out.push(`d-i netcfg/get_netmask string ${prefixToNetmask(iface.prefix)}`)
+    if (iface.gateway) out.push(`d-i netcfg/get_gateway string ${iface.gateway}`)
+    if (iface.nameservers.length > 0)
+      out.push(`d-i netcfg/get_nameservers string ${iface.nameservers.join(' ')}`)
+    out.push('d-i netcfg/confirm_static boolean true')
+  }
+
+  return out
 }
 
-// TODO(T3): passwd directives. root: locked → root-login false; password →
-// root-login true + root-password-crypted <hash>; sshkey → root-login true +
-// root-password-crypted `!` (locked) + keys via late_command. user: make-user
-// true + user-fullname + username + user-password-crypted (when set) +
-// user-default-groups (SPACE-joined; append `sudo` when primaryUser.sudo).
-export function identityLines(_spec: InstallSpec): string[] {
-  return []
+export function identityLines(spec: InstallSpec): string[] {
+  const { rootPolicy, rootPasswordCrypt, primaryUser: u } = spec.identity
+  const out: string[] = []
+
+  if (rootPolicy === 'locked') {
+    out.push('d-i passwd/root-login boolean false')
+  } else if (rootPolicy === 'password') {
+    out.push('d-i passwd/root-login boolean true')
+    out.push(`d-i passwd/root-password-crypted password ${rootPasswordCrypt}`)
+  } else {
+    // sshkey: lock the root password hash; keys installed by late_command
+    out.push('d-i passwd/root-login boolean true')
+    out.push('d-i passwd/root-password-crypted password !')
+  }
+
+  out.push('d-i passwd/make-user boolean true')
+  if (u.gecos) out.push(`d-i passwd/user-fullname string ${u.gecos}`)
+  out.push(`d-i passwd/username string ${u.name}`)
+  if (u.passwordMode === 'hashed' && u.passwordCrypt)
+    out.push(`d-i passwd/user-password-crypted password ${u.passwordCrypt}`)
+
+  const BASE_GROUPS = ['audio', 'cdrom', 'video', 'plugdev', 'netdev']
+  const groups = u.sudo ? [...BASE_GROUPS, 'sudo'] : BASE_GROUPS
+  out.push(`d-i passwd/user-default-groups string ${groups.join(' ')}`)
+
+  return out
 }
 
-// TODO(T3): partman. partman/early_command debconf-set partman-auto/disk
-// "$(list-devices disk | head -n1)"; partman-auto/method {lvm|regular|crypto};
-// choose_recipe atomic; full confirm boilerplate; crypto passphrase + confirms;
-// device_remove_lvm/md on wipe; GPT/msdos label by firmware. scheme=manual emits
-// nothing here (relies on scripts.rawPreseed).
-export function storageLines(_spec: InstallSpec): string[] {
-  return []
+export function storageLines(spec: InstallSpec): string[] {
+  if (spec.storage.scheme === 'manual') return []
+
+  const { encryption } = spec.storage
+  const method = encryption.enabled
+    ? 'crypto'
+    : spec.storage.scheme === 'autopart-lvm'
+      ? 'lvm'
+      : 'regular'
+
+  const out: string[] = [
+    `d-i partman/early_command string debconf-set partman-auto/disk "$(list-devices disk | head -n1)"`,
+    `d-i partman-auto/method string ${method}`,
+    'd-i partman-auto/choose_recipe select atomic',
+    'd-i partman-lvm/device_remove_lvm boolean true',
+    'd-i partman-md/device_remove_md boolean true',
+    'd-i partman-lvm/confirm boolean true',
+    'd-i partman-lvm/confirm_nooverwrite boolean true',
+    'd-i partman-partitioning/confirm_write_new_label boolean true',
+    'd-i partman/choose_partition select finish',
+    'd-i partman/confirm boolean true',
+    'd-i partman/confirm_nooverwrite boolean true',
+    `d-i partman-partitioning/choose_label select ${spec.target.firmware === 'uefi' ? 'gpt' : 'msdos'}`,
+  ]
+
+  if (encryption.enabled) {
+    out.push(
+      `d-i partman-crypto/passphrase password ${encryption.passphrase}`,
+      `d-i partman-crypto/passphrase-again password ${encryption.passphrase}`,
+      'd-i partman-crypto/confirm boolean true',
+      'd-i partman-crypto/confirm_nooverwrite boolean true',
+    )
+  }
+
+  return out
 }
 
-// TODO(T3): pkgsel/include (SPACE-joined; append `sudo` when primaryUser.sudo) +
-// pkgsel/upgrade none + tasksel standard; mirror/http/{hostname,directory} parsed
-// from aptMirror (default deb.debian.org /debian) + mirror/country manual.
-export function packagesLines(_spec: InstallSpec): string[] {
-  return []
+export function packagesLines(spec: InstallSpec): string[] {
+  let host = 'deb.debian.org'
+  let dir = '/debian'
+  try {
+    if (spec.packages.aptMirror) {
+      const u = new URL(spec.packages.aptMirror)
+      host = u.hostname
+      dir = u.pathname || '/debian'
+    }
+  } catch {
+    // invalid URL — keep defaults
+  }
+
+  const out: string[] = [
+    'd-i mirror/country string manual',
+    `d-i mirror/http/hostname string ${host}`,
+    `d-i mirror/http/directory string ${dir}`,
+  ]
+
+  const seen = new Set<string>()
+  const include: string[] = []
+  for (const pkg of spec.packages.individual) {
+    if (!seen.has(pkg)) {
+      seen.add(pkg)
+      include.push(pkg)
+    }
+  }
+  if (spec.identity.primaryUser.sudo && !seen.has('sudo')) {
+    include.push('sudo')
+  }
+  if (include.length > 0) out.push(`d-i pkgsel/include string ${include.join(' ')}`)
+
+  out.push('d-i pkgsel/upgrade select none')
+  out.push('tasksel tasksel/first multiselect standard')
+
+  return out
 }
 
 export function finishingLines(_spec: InstallSpec): string[] {
