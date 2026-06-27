@@ -15,8 +15,6 @@ export interface CrossFormatDrop {
 const sameSet = (a: readonly string[], b: readonly string[]): boolean =>
   a.length === b.length && a.every((x) => b.includes(x))
 
-const D = DEFAULT_SPEC
-
 /**
  * The single source of truth for "warn-on-intent": a field is a drop ONLY when
  * (a) the chosen format genuinely cannot render it AND (b) its value carries
@@ -39,7 +37,7 @@ export function crossFormatDrops(spec: InstallSpec, format: TargetFormat): Cross
   if (format === 'autoinstall') {
     // SELinux is RHEL-only. 'enforcing' (default) and 'disabled' (intent met by a
     // target that lacks SELinux) carry no lost intent — only 'permissive' does.
-    if (security.selinux !== D.security.selinux && security.selinux !== 'disabled') {
+    if (security.selinux !== DEFAULT_SPEC.security.selinux && security.selinux !== 'disabled') {
       out.push({
         field: 'security.selinux',
         message: 'SELinux is RHEL-only; ignored on Ubuntu, which enforces AppArmor.',
@@ -50,7 +48,7 @@ export function crossFormatDrops(spec: InstallSpec, format: TargetFormat): Cross
     // is lost intent.
     if (
       security.firewall.enabled &&
-      !sameSet(security.firewall.services, D.security.firewall.services)
+      !sameSet(security.firewall.services, DEFAULT_SPEC.security.firewall.services)
     ) {
       out.push({
         field: 'security.firewall',
@@ -59,7 +57,7 @@ export function crossFormatDrops(spec: InstallSpec, format: TargetFormat): Cross
     }
     // Empty groups drop nothing; the default group is the silent baseline — only a
     // non-default, non-empty group set is lost intent on Ubuntu.
-    if (packages.groups.length > 0 && !sameSet(packages.groups, D.packages.groups)) {
+    if (packages.groups.length > 0 && !sameSet(packages.groups, DEFAULT_SPEC.packages.groups)) {
       out.push({
         field: 'packages.groups',
         message: 'Package groups (@…) are unsupported on Ubuntu; list individual packages instead.',
@@ -80,7 +78,7 @@ export function crossFormatDrops(spec: InstallSpec, format: TargetFormat): Cross
   } else {
     // AppArmor is Ubuntu-only. 'enforce' (default) and 'disabled' (intent met)
     // carry no lost intent — only 'complain' does.
-    if (security.apparmor !== D.security.apparmor && security.apparmor !== 'disabled') {
+    if (security.apparmor !== DEFAULT_SPEC.security.apparmor && security.apparmor !== 'disabled') {
       out.push({
         field: 'security.apparmor',
         message: 'AppArmor is not configurable from Kickstart; setting ignored on this target.',

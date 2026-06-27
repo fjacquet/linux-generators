@@ -3,14 +3,14 @@ import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { IdentitySection } from './IdentitySection'
 
-const store = () => useGeneratorStore.getState()
-
+// reset() restores the default RHEL spec but leaves targetFormat untouched, so
+// every test sets the format explicitly via chooseFormat (which syncs both).
 describe('IdentitySection cross-format note', () => {
-  beforeEach(() => store().reset())
+  beforeEach(() => useGeneratorStore.getState().reset())
 
   it('shows the "not emitted" note for a root password on Ubuntu', () => {
-    store().chooseFormat('autoinstall')
-    store().update((d) => {
+    useGeneratorStore.getState().chooseFormat('autoinstall')
+    useGeneratorStore.getState().update((d) => {
       // today's Autoinstall emitter locks root → password policy is lost intent
       d.identity.rootPolicy = 'password'
     })
@@ -19,14 +19,14 @@ describe('IdentitySection cross-format note', () => {
   })
 
   it('shows no note for the default locked root policy on Ubuntu', () => {
-    store().chooseFormat('autoinstall')
+    useGeneratorStore.getState().chooseFormat('autoinstall')
     render(<IdentitySection />)
     expect(screen.queryByText(/not emitted for/i)).not.toBeInTheDocument()
   })
 
   it('shows no note on a Kickstart target even with a root password', () => {
-    store().chooseFormat('kickstart')
-    store().update((d) => {
+    useGeneratorStore.getState().chooseFormat('kickstart')
+    useGeneratorStore.getState().update((d) => {
       d.identity.rootPolicy = 'password'
     })
     render(<IdentitySection />)
