@@ -116,6 +116,20 @@ describe('parseKickstart', () => {
     })
   })
 
+  it('preserves an unsupported rootpw mode verbatim instead of dropping the password', () => {
+    const { spec } = parseKickstart('rootpw --plaintext root\n')
+    // The positional password must NOT be silently lost: the whole line is kept verbatim.
+    expect(spec.passthrough.kickstart.extraCommands).toContain('rootpw --plaintext root')
+  })
+
+  it('reads network --prefix directly (does not keep default 24 or record it as unknown)', () => {
+    const { spec } = parseKickstart(
+      'network --bootproto=static --ip=10.0.0.5 --prefix=16 --device=eth0\n',
+    )
+    expect(spec.network.interfaces[0]?.prefix).toBe(16)
+    expect(spec.passthrough.kickstart.unknownFlags).toHaveLength(0)
+  })
+
   it('does not record --initlabel into unknownFlags for clearpart', () => {
     const { spec } = parseKickstart('clearpart --all --initlabel\n')
     expect(spec.passthrough.kickstart.unknownFlags.some((e) => e.command === 'clearpart')).toBe(
@@ -171,6 +185,12 @@ echo hi
     expect(spec.security.sshHardening.permitRootLogin).toBe(true)
     expect(spec.security.sshHardening.passwordAuth).toBe(false)
     expect(spec.scripts.rawKickstartPost).toBe('echo hi')
+  })
+
+  it('preserves leading indentation in the remaining %post body (no trim)', () => {
+    const ks = '%post\n  if true; then\n    echo nested\n  fi\n%end\n'
+    const { spec } = parseKickstart(ks)
+    expect(spec.scripts.rawKickstartPost).toBe('  if true; then\n    echo nested\n  fi')
   })
 
   it('rootPolicy=sshkey round-trip: root key is not lost on re-emit', () => {

@@ -128,7 +128,9 @@ export function parseKickstart(text: string): ParseResult {
           }
           remaining.push(line)
         }
-        spec.scripts.rawKickstartPost = remaining.join('\n').trim()
+        // Keep the remaining body byte-for-byte (no trim) so indented shell
+        // blocks and edge blank lines survive the round-trip.
+        spec.scripts.rawKickstartPost = remaining.join('\n')
         mapped++
       } else {
         spec.passthrough.kickstart.extraSections.push({ header, body: node.body })
@@ -184,14 +186,28 @@ export function parseKickstart(text: string): ParseResult {
         mapped++
         break
       case 'network': {
+        // --prefix is the direct CIDR length; otherwise derive it from --netmask; else default 24.
         const rawNetmask = flagVal(flags, 'netmask')
-        const rawPrefix = rawNetmask !== undefined ? netmaskToPrefix(rawNetmask) : 24
-        const prefix = rawPrefix >= 0 && rawPrefix <= 32 ? rawPrefix : 24
-        if (rawNetmask !== undefined && rawPrefix !== prefix) {
+        const rawPrefixFlag = flagVal(flags, 'prefix')
+        const rawPrefix =
+          rawPrefixFlag !== undefined
+            ? Number.parseInt(rawPrefixFlag, 10)
+            : rawNetmask !== undefined
+              ? netmaskToPrefix(rawNetmask)
+              : 24
+        const prefix =
+          Number.isFinite(rawPrefix) && rawPrefix >= 0 && rawPrefix <= 32 ? rawPrefix : 24
+        const prefixSource =
+          rawPrefixFlag !== undefined
+            ? `prefix "${rawPrefixFlag}"`
+            : rawNetmask !== undefined
+              ? `netmask "${rawNetmask}"`
+              : undefined
+        if (prefixSource !== undefined && rawPrefix !== prefix) {
           diagnostics.push({
             severity: 'warning',
             field: 'network.interfaces',
-            message: `netmask "${rawNetmask}" in "${raw}" yields out-of-range prefix ${rawPrefix}; defaulting to 24.`,
+            message: `${prefixSource} in "${raw}" yields out-of-range prefix ${rawPrefix}; defaulting to 24.`,
           })
         }
         const iface = {
@@ -216,6 +232,7 @@ export function parseKickstart(text: string): ParseResult {
                 'bootproto',
                 'ip',
                 'netmask',
+                'prefix',
                 'gateway',
                 'nameserver',
                 'hostname',
@@ -227,17 +244,29 @@ export function parseKickstart(text: string): ParseResult {
         break
       }
       case 'rootpw':
-        if (hasFlag(flags, 'lock')) spec.identity.rootPolicy = 'locked'
-        else if (hasFlag(flags, 'iscrypted')) {
+        if (hasFlag(flags, 'lock')) {
+          spec.identity.rootPolicy = 'locked'
+          recordUnknownFlags(
+            name,
+            index,
+            flags.filter((f) => f.key !== 'lock'),
+          )
+          mapped++
+        } else if (hasFlag(flags, 'iscrypted')) {
           spec.identity.rootPolicy = 'password'
           spec.identity.rootPasswordCrypt = positionals[0] ?? ''
+          recordUnknownFlags(
+            name,
+            index,
+            flags.filter((f) => f.key !== 'iscrypted'),
+          )
+          mapped++
+        } else {
+          // Unsupported rootpw mode (e.g. `rootpw --plaintext root`): mapping it
+          // would change auth semantics, and recordUnknownFlags would silently
+          // drop the positional password. Preserve the whole line verbatim.
+          spec.passthrough.kickstart.extraCommands.push(raw)
         }
-        recordUnknownFlags(
-          name,
-          index,
-          flags.filter((f) => f.key !== 'lock' && f.key !== 'iscrypted'),
-        )
-        mapped++
         break
       case 'selinux': {
         const mode = ['enforcing', 'permissive', 'disabled'].find((m) => hasFlag(flags, m))

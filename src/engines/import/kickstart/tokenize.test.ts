@@ -33,4 +33,13 @@ describe('tokenizeKickstart', () => {
     expect(nodes[0]).toEqual({ kind: 'comment', raw: '# hello' })
     expect(nodes[1]).toEqual({ kind: 'blank' })
   })
+
+  it('preserves leading indentation in section bodies (no trim)', () => {
+    const nodes = tokenizeKickstart('%post\n  if true; then\n    echo nested\n  fi\n%end\n')
+    expect(nodes.find((n) => n.kind === 'section')).toMatchObject({
+      kind: 'section',
+      header: '%post',
+      body: '  if true; then\n    echo nested\n  fi',
+    })
+  })
 })

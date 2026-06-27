@@ -41,7 +41,10 @@ export function tokenizeKickstart(text: string): KsNode[] {
         body.push(lines[i] as string)
         i++
       }
-      nodes.push({ kind: 'section', header, body: body.join('\n').trim() })
+      // Preserve the body verbatim — trimming would strip leading indentation
+      // and edge blank lines from %pre/%post/passthrough scripts, mutating the
+      // user's content before it ever reaches the parser (lossy round-trip).
+      nodes.push({ kind: 'section', header, body: body.join('\n') })
       continue
     }
     if (line.trim() === '') {
