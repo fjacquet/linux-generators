@@ -1,5 +1,8 @@
 // src/engines/import/kickstart/parseKickstart.test.ts
 import { describe, expect, it } from 'vitest'
+import { emitKickstart } from '../../emit/kickstart/emitKickstart'
+import { freshDefaultSpec } from '../../model'
+import { roundTrip } from '../roundTrip'
 import { parseKickstart } from './parseKickstart'
 
 const KS = `# sample
@@ -94,13 +97,12 @@ describe('parseKickstart', () => {
     ])
   })
 
-  it('records an unknown flag on firewall via unknownFlags', () => {
-    const { spec } = parseKickstart('firewall --enabled --service=ssh\n')
-    expect(spec.passthrough.kickstart.unknownFlags).toContainEqual({
-      command: 'firewall',
-      index: 0,
-      flags: ['--service=ssh'],
-    })
+  it('maps --service flags into spec.security.firewall.services (not unknownFlags)', () => {
+    const { spec } = parseKickstart('firewall --enabled --service=ssh --service=http\n')
+    expect(spec.security.firewall.services).toEqual(['ssh', 'http'])
+    expect(spec.passthrough.kickstart.unknownFlags.some((e) => e.command === 'firewall')).toBe(
+      false,
+    )
   })
 
   it('records an unknown flag on rootpw while still mapping the known flag', () => {
@@ -111,5 +113,18 @@ describe('parseKickstart', () => {
       index: 0,
       flags: ['--minlen=8'],
     })
+  })
+
+  it('does not record --initlabel into unknownFlags for clearpart', () => {
+    const { spec } = parseKickstart('clearpart --all --initlabel\n')
+    expect(spec.passthrough.kickstart.unknownFlags.some((e) => e.command === 'clearpart')).toBe(
+      false,
+    )
+  })
+
+  it('round-trips a default-spec kickstart without loss', () => {
+    const original = emitKickstart(freshDefaultSpec()).files[0]?.content ?? ''
+    const { spec } = parseKickstart(original)
+    expect(roundTrip(original, spec, 'kickstart').fidelity).not.toBe('lossy')
   })
 })

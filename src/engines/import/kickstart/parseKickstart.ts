@@ -200,10 +200,13 @@ export function parseKickstart(text: string): ParseResult {
       }
       case 'firewall':
         spec.security.firewall.enabled = !hasFlag(flags, 'disabled')
+        spec.security.firewall.services = flags
+          .filter((f) => f.key === 'service')
+          .flatMap((f) => (f.value !== null ? [f.value] : []))
         recordUnknownFlags(
           name,
           index,
-          flags.filter((f) => f.key !== 'enabled' && f.key !== 'disabled'),
+          flags.filter((f) => f.key !== 'enabled' && f.key !== 'disabled' && f.key !== 'service'),
         )
         mapped++
         break
@@ -225,7 +228,7 @@ export function parseKickstart(text: string): ParseResult {
         recordUnknownFlags(
           name,
           index,
-          flags.filter((f) => !['all', 'linux', 'none'].includes(f.key)),
+          flags.filter((f) => !['all', 'linux', 'none', 'initlabel'].includes(f.key)),
         )
         mapped++
         break
