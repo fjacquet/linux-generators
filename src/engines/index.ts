@@ -1,4 +1,6 @@
 export type { ConfigLanguage, EmitResult, EmittedFile, Quirks } from './emit'
 export { emit, emitAutoinstall, emitKickstart, quirksFor } from './emit'
+export { generate } from './generate'
 export * from './model'
 export type { Diagnostic, Severity } from './types'
+export { validate, validateAutoinstall, validateKickstart } from './validate'

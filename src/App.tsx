@@ -1,3 +1,4 @@
+import { DiagnosticsList } from '@components/DiagnosticsList'
 import { FallbackError } from '@components/FallbackError'
 import { FormatToggle } from '@components/FormatToggle'
 import { IdentitySection } from '@components/form/IdentitySection'
@@ -46,8 +47,11 @@ export default function App() {
             <SecuritySection />
             <ScriptsSection />
           </form>
-          <div className="lg:sticky lg:top-6 lg:h-[calc(100svh-3rem)]">
-            <PreviewPane />
+          <div className="flex flex-col gap-3 lg:sticky lg:top-6 lg:h-[calc(100svh-3rem)]">
+            <DiagnosticsList />
+            <div className="min-h-0 flex-1">
+              <PreviewPane />
+            </div>
           </div>
         </div>
       </div>
