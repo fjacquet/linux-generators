@@ -18,6 +18,12 @@ const COMPLEX_STORAGE = new Set(['part', 'logvol', 'volgroup', 'raid', 'btrfs'])
 const AUTOPART_KNOWN = new Set(['type', 'encrypted', 'passphrase', 'nohome'])
 const SELINUX_MODES = new Set(['enforcing', 'permissive', 'disabled'])
 
+// Match exactly the sed lines emitted by sshHardeningPost() so they are stripped on re-import
+const PERMIT_ROOT_LOGIN_RE =
+  /^sed -i 's\/\^#\\\?PermitRootLogin\.\*\/PermitRootLogin (yes|no)\/' \/etc\/ssh\/sshd_config$/
+const PASSWORD_AUTH_RE =
+  /^sed -i 's\/\^#\\\?PasswordAuthentication\.\*\/PasswordAuthentication (yes|no)\/' \/etc\/ssh\/sshd_config$/
+
 const netmaskToPrefix = (mask: string): number => {
   const parts = mask.split('.').map(Number)
   if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return 24
@@ -85,20 +91,15 @@ export function parseKickstart(text: string): ParseResult {
         spec.scripts.rawKickstartPre = node.body
         mapped++
       } else if (header.startsWith('%post')) {
-        // Strip emitter-generated ssh-hardening sed lines so they are not duplicated
-        // on re-emit. The two patterns exactly match sshHardeningPost() output.
-        const permitRootLoginRe =
-          /^sed -i 's\/\^#\\\?PermitRootLogin\.\*\/PermitRootLogin (yes|no)\/' \/etc\/ssh\/sshd_config$/
-        const passwordAuthRe =
-          /^sed -i 's\/\^#\\\?PasswordAuthentication\.\*\/PasswordAuthentication (yes|no)\/' \/etc\/ssh\/sshd_config$/
+        // Strip emitter-generated ssh-hardening sed lines so they are not duplicated on re-emit.
         const remaining: string[] = []
         for (const line of node.body.split('\n')) {
-          const permitMatch = line.match(permitRootLoginRe)
+          const permitMatch = line.match(PERMIT_ROOT_LOGIN_RE)
           if (permitMatch) {
             spec.security.sshHardening.permitRootLogin = (permitMatch[1] ?? 'no') === 'yes'
             continue
           }
-          const passwordMatch = line.match(passwordAuthRe)
+          const passwordMatch = line.match(PASSWORD_AUTH_RE)
           if (passwordMatch) {
             spec.security.sshHardening.passwordAuth = (passwordMatch[1] ?? 'no') === 'yes'
             continue
@@ -288,8 +289,12 @@ export function parseKickstart(text: string): ParseResult {
         const sshUsername = flagVal(flags, 'username')
         const key = positionals[0]
         if (key) {
-          if (sshUsername === 'root') spec.identity.rootSshKeys.push(key)
-          else spec.identity.primaryUser.sshKeys.push(key)
+          if (sshUsername === 'root') {
+            spec.identity.rootSshKeys.push(key)
+            spec.identity.rootPolicy = 'sshkey'
+          } else {
+            spec.identity.primaryUser.sshKeys.push(key)
+          }
         }
         recordUnknownFlags(
           name,

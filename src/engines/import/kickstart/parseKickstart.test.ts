@@ -145,10 +145,11 @@ describe('parseKickstart', () => {
     expect(spec.passthrough.kickstart.extraCommands.some((c) => c.startsWith('user'))).toBe(false)
   })
 
-  it('maps sshkey --username=root into rootSshKeys', () => {
+  it('maps sshkey --username=root into rootSshKeys and sets rootPolicy=sshkey', () => {
     const ks = 'sshkey --username=root "ssh-ed25519 AAA"\n'
     const { spec } = parseKickstart(ks)
     expect(spec.identity.rootSshKeys).toContain('ssh-ed25519 AAA')
+    expect(spec.identity.rootPolicy).toBe('sshkey')
     expect(spec.passthrough.kickstart.extraCommands.some((c) => c.startsWith('sshkey'))).toBe(false)
   })
 
@@ -169,6 +170,18 @@ echo hi
     expect(spec.security.sshHardening.permitRootLogin).toBe(true)
     expect(spec.security.sshHardening.passwordAuth).toBe(false)
     expect(spec.scripts.rawKickstartPost).toBe('echo hi')
+  })
+
+  it('rootPolicy=sshkey round-trip: root key is not lost on re-emit', () => {
+    const spec = freshDefaultSpec()
+    spec.identity.rootPolicy = 'sshkey'
+    spec.identity.rootSshKeys = ['ssh-ed25519 AAAATESTKEY user@host']
+    const original = emitKickstart(spec).files[0]?.content ?? ''
+    const s1 = parseKickstart(original).spec
+    expect(s1.identity.rootPolicy).toBe('sshkey')
+    expect(s1.identity.rootSshKeys).toContain('ssh-ed25519 AAAATESTKEY user@host')
+    const s2 = parseKickstart(emitKickstart(s1).files[0]?.content ?? '').spec
+    expect(s2).toEqual(s1)
   })
 
   it('does not route bootloader or services into extraCommands', () => {
