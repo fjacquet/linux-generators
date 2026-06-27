@@ -1,6 +1,6 @@
 import { defaultTargetForFormat, freshDefaultSpec, type InstallSpec } from '@engines/model'
 import { describe, expect, it } from 'vitest'
-import { buildLateCommand } from './lateCommand'
+import { buildEarlyCommand, buildLateCommand } from './lateCommand'
 
 // Helper: fresh Debian preseed spec with optional mutations.
 const makeSpec = (mutate?: (s: InstallSpec) => void): InstallSpec => {
@@ -140,5 +140,27 @@ describe('buildLateCommand', () => {
     )
     expect(out).toHaveLength(1)
     expect(out[0]).not.toContain('\n')
+  })
+})
+
+describe('buildEarlyCommand', () => {
+  it('emits one preseed/early_command directive, ; -joined verbatim', () => {
+    // these run in the installer env (pre-chroot), so no in-target/curtin rewrite
+    const out = buildEarlyCommand(
+      makeSpec((s) => {
+        s.scripts.earlyCommands = ['echo hi', 'wipefs -a /dev/sdb']
+      }),
+    )
+    expect(out).toEqual(['d-i preseed/early_command string echo hi; wipefs -a /dev/sdb'])
+  })
+
+  it('returns [] when there are no early commands (no empty directive)', () => {
+    expect(
+      buildEarlyCommand(
+        makeSpec((s) => {
+          s.scripts.earlyCommands = []
+        }),
+      ),
+    ).toEqual([])
   })
 })

@@ -2,7 +2,7 @@ import type { InstallSpec } from '../../model/installSpec'
 import type { Diagnostic } from '../../types'
 import { crossFormatDrops } from '../crossFormat'
 import type { EmitResult } from '../types'
-import { buildLateCommand } from './lateCommand'
+import { buildEarlyCommand, buildLateCommand } from './lateCommand'
 import {
   finishingLines,
   identityLines,
@@ -33,6 +33,7 @@ export function emitPreseed(spec: InstallSpec): EmitResult {
     ...header,
     ...localeLines(spec),
     ...networkLines(spec),
+    ...buildEarlyCommand(spec),
     ...storageLines(spec),
     ...identityLines(spec),
     ...packagesLines(spec),

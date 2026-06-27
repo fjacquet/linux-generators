@@ -85,3 +85,11 @@ export function buildLateCommand(spec: InstallSpec): string[] {
   ]
   return fragments.length === 0 ? [] : [`d-i preseed/late_command string ${fragments.join('; ')}`]
 }
+
+// `scripts.earlyCommands` map 1:1 to preseed/early_command, joined on one line.
+// These run in the installer env before partitioning (no chroot), so they are
+// emitted verbatim — the `curtin in-target` rewrite applies only to late commands.
+export function buildEarlyCommand(spec: InstallSpec): string[] {
+  const cmds = spec.scripts.earlyCommands
+  return cmds.length === 0 ? [] : [`d-i preseed/early_command string ${cmds.join('; ')}`]
+}

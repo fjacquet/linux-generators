@@ -36,6 +36,17 @@ describe('emitPreseed (skeleton)', () => {
     expect(out).toContain('d-i some/custom/question string value')
   })
 
+  it('emits scripts.earlyCommands as a preseed/early_command directive', () => {
+    // regression: the form exposes early-commands for Debian; they must not be
+    // silently dropped at emit (only late_command was wired originally).
+    const out = emitPreseed(
+      debianSpec((d) => {
+        d.scripts.earlyCommands = ['anna-install foo']
+      }),
+    ).files[0]?.content
+    expect(out).toContain('d-i preseed/early_command string anna-install foo')
+  })
+
   it('is deterministic (same spec → identical bytes)', () => {
     expect(emitPreseed(debianSpec()).files[0]?.content).toBe(
       emitPreseed(debianSpec()).files[0]?.content,
