@@ -21,19 +21,12 @@ const DEFAULT_VERSION: Record<string, string> = {
 export function TargetSection() {
   const { t } = useTranslation()
   const [spec, update] = useSpec()
-  const setTargetFormat = useGeneratorStore((s) => s.setTargetFormat)
+  const chooseFormat = useGeneratorStore((s) => s.chooseFormat)
   const { osFamily, distro, version, arch, firmware } = spec.target
 
-  const changeFamily = (next: string) => {
-    const family = next as InstallSpec['target']['osFamily']
-    const nextDistro = DISTROS_BY_FAMILY[family][0] ?? family
-    update((d) => {
-      d.target.osFamily = family
-      d.target.distro = nextDistro as InstallSpec['target']['distro']
-      d.target.version = DEFAULT_VERSION[nextDistro] ?? d.target.version
-    })
-    setTargetFormat(family === 'ubuntu' ? 'autoinstall' : 'kickstart')
-  }
+  // Family ⇄ format is 1:1; delegate to the store so the two stay in sync.
+  const changeFamily = (next: string) =>
+    chooseFormat(next === 'ubuntu' ? 'autoinstall' : 'kickstart')
 
   return (
     <CollapsibleSection id="target" title={t('section.target')}>

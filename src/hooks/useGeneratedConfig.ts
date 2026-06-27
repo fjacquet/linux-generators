@@ -1,5 +1,5 @@
 import type { EmitResult } from '@engines/emit'
-import { emitKickstart } from '@engines/emit'
+import { emit } from '@engines/emit'
 import { selectSpec, selectTargetFormat, useGeneratorStore } from '@store/generatorStore'
 import { useMemo } from 'react'
 
@@ -10,13 +10,5 @@ export function useGeneratedConfig(): EmitResult {
   const spec = useGeneratorStore(selectSpec)
   const format = useGeneratorStore(selectTargetFormat)
 
-  return useMemo<EmitResult>(() => {
-    // Phase 2 adds the autoinstall engine + validation diagnostics here.
-    switch (format) {
-      case 'kickstart':
-        return emitKickstart(spec)
-      case 'autoinstall':
-        return emitKickstart(spec)
-    }
-  }, [spec, format])
+  return useMemo<EmitResult>(() => emit(spec, format), [spec, format])
 }

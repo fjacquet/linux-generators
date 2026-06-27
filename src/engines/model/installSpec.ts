@@ -149,3 +149,15 @@ export type InstallSpec = z.infer<typeof InstallSpecSchema>
 export type NetInterfaceSpec = z.infer<typeof NetInterface>
 export type PartitionSpec = z.infer<typeof Partition>
 export type TargetFormat = 'kickstart' | 'autoinstall'
+
+/** The OS-family ⇄ format relationship is 1:1; this is the single place it lives. */
+export function defaultTargetForFormat(
+  format: TargetFormat,
+): Pick<InstallSpec['target'], 'osFamily' | 'distro' | 'version'> {
+  return format === 'autoinstall'
+    ? { osFamily: 'ubuntu', distro: 'ubuntu', version: '24.04' }
+    : { osFamily: 'rhel', distro: 'rhel', version: '9' }
+}
+
+export const formatForOsFamily = (osFamily: InstallSpec['target']['osFamily']): TargetFormat =>
+  osFamily === 'ubuntu' ? 'autoinstall' : 'kickstart'

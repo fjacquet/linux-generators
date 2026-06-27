@@ -1,0 +1,98 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`emitAutoinstall > golden output: 'encrypted-ubuntu' 1`] = `
+"#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+    variant: ""
+  timezone: UTC
+  identity:
+    hostname: localhost.localdomain
+    username: admin
+    realname: admin
+    password: "!"
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys: []
+  storage:
+    layout:
+      name: lvm
+      password: secret
+  packages:
+    - openssh-server
+  late-commands:
+    - curtin in-target -- systemctl enable myservice
+  shutdown: reboot
+"
+`;
+
+exports[`emitAutoinstall > golden output: 'minimal-ubuntu' 1`] = `
+"#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+    variant: ""
+  timezone: UTC
+  identity:
+    hostname: localhost.localdomain
+    username: admin
+    realname: admin
+    password: "!"
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys: []
+  storage:
+    layout:
+      name: lvm
+  packages:
+    - openssh-server
+  shutdown: reboot
+"
+`;
+
+exports[`emitAutoinstall > golden output: 'static-ubuntu' 1`] = `
+"#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+    variant: ""
+  timezone: UTC
+  identity:
+    hostname: web01
+    username: admin
+    realname: admin
+    password: "!"
+  ssh:
+    install-server: true
+    allow-pw: false
+    authorized-keys:
+      - ssh-ed25519 AAAAUBUNTU admin@host
+  storage:
+    layout:
+      name: lvm
+  network:
+    version: 2
+    ethernets:
+      ens3:
+        addresses:
+          - 10.0.0.10/24
+        routes:
+          - to: default
+            via: 10.0.0.1
+        nameservers:
+          addresses:
+            - 10.0.0.2
+  packages:
+    - openssh-server
+  shutdown: reboot
+"
+`;

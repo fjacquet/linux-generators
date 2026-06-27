@@ -1,4 +1,9 @@
-import { freshDefaultSpec, type InstallSpec, type TargetFormat } from '@engines/model'
+import {
+  defaultTargetForFormat,
+  freshDefaultSpec,
+  type InstallSpec,
+  type TargetFormat,
+} from '@engines/model'
 import { create } from 'zustand'
 
 // Inputs-only store, modeled on vatlas's snapshotStore: it holds the spec being
@@ -25,6 +30,8 @@ interface GeneratorState {
   /** Ergonomic immutable update: mutate a fresh draft; the store swaps the ref. */
   update: (mutate: (draft: InstallSpec) => void) => void
   setTargetFormat: (format: TargetFormat) => void
+  /** Switch format AND sync the target OS family/distro/version to match. */
+  chooseFormat: (format: TargetFormat) => void
   toggleSection: (sectionId: string) => void
   setShowRawPanels: (show: boolean) => void
   loadProfile: (spec: InstallSpec) => void
@@ -46,6 +53,13 @@ export const useGeneratorStore = create<GeneratorState>((set) => ({
     }),
 
   setTargetFormat: (format) => set({ targetFormat: format }),
+
+  chooseFormat: (format) =>
+    set((state) => {
+      const spec = structuredClone(state.spec)
+      Object.assign(spec.target, defaultTargetForFormat(format))
+      return { spec, targetFormat: format }
+    }),
 
   toggleSection: (sectionId) =>
     set((state) => ({

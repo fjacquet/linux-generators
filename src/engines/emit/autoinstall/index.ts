@@ -1,0 +1,1 @@
+export { emitAutoinstall } from './emitAutoinstall'

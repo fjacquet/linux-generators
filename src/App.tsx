@@ -1,6 +1,11 @@
 import { FallbackError } from '@components/FallbackError'
+import { FormatToggle } from '@components/FormatToggle'
 import { IdentitySection } from '@components/form/IdentitySection'
 import { LocaleSection } from '@components/form/LocaleSection'
+import { NetworkSection } from '@components/form/NetworkSection'
+import { PackagesSection } from '@components/form/PackagesSection'
+import { ScriptsSection } from '@components/form/ScriptsSection'
+import { SecuritySection } from '@components/form/SecuritySection'
 import { StorageSection } from '@components/form/StorageSection'
 import { TargetSection } from '@components/form/TargetSection'
 import { LanguageToggle } from '@components/LanguageToggle'
@@ -24,6 +29,7 @@ export default function App() {
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t('app.tagline')}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <FormatToggle />
             <LanguageToggle />
             <ThemeToggle />
           </div>
@@ -34,7 +40,11 @@ export default function App() {
             <TargetSection />
             <LocaleSection />
             <StorageSection />
+            <NetworkSection />
             <IdentitySection />
+            <PackagesSection />
+            <SecuritySection />
+            <ScriptsSection />
           </form>
           <div className="lg:sticky lg:top-6 lg:h-[calc(100svh-3rem)]">
             <PreviewPane />
