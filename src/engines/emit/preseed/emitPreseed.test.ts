@@ -1,5 +1,6 @@
 import { defaultTargetForFormat, freshDefaultSpec, type InstallSpec } from '@engines/model'
 import { describe, expect, it } from 'vitest'
+import { PRESEED_FIXTURES } from '@/__fixtures__/debianSpecs'
 import { emitPreseed } from './emitPreseed'
 
 const debianSpec = (mutate?: (d: InstallSpec) => void): InstallSpec => {
@@ -9,6 +10,12 @@ const debianSpec = (mutate?: (d: InstallSpec) => void): InstallSpec => {
   mutate?.(s)
   return s
 }
+
+describe('emitPreseed golden', () => {
+  it.each(PRESEED_FIXTURES)('golden output: $name', ({ spec }) => {
+    expect(emitPreseed(spec).files[0]?.content).toMatchSnapshot()
+  })
+})
 
 describe('emitPreseed (skeleton)', () => {
   it('produces a single preseed.cfg file', () => {
