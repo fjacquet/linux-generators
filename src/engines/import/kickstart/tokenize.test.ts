@@ -42,4 +42,27 @@ describe('tokenizeKickstart', () => {
       body: '  if true; then\n    echo nested\n  fi',
     })
   })
+
+  it('does NOT fold backslash continuations inside a section body (verbatim)', () => {
+    const nodes = tokenizeKickstart('%post\necho foo \\\nbar\n%end\n')
+    // The user's two physical lines (with the trailing backslash) survive exactly;
+    // continuation folding is command-only.
+    expect(nodes.find((n) => n.kind === 'section')).toMatchObject({
+      kind: 'section',
+      header: '%post',
+      body: 'echo foo \\\nbar',
+    })
+  })
+
+  it('still folds continuations for a command that follows a section', () => {
+    const nodes = tokenizeKickstart(
+      '%packages\n@core\n%end\nnetwork --device=eth0 \\\n  --bootproto=dhcp\n',
+    )
+    const cmd = nodes.find((n) => n.kind === 'command')
+    expect(cmd).toMatchObject({
+      kind: 'command',
+      name: 'network',
+      args: '--device=eth0 --bootproto=dhcp',
+    })
+  })
 })
