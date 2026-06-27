@@ -1,4 +1,6 @@
 import type { InstallSpec } from '../../model/installSpec'
+import type { Diagnostic } from '../../types'
+import { crossFormatDrops } from '../crossFormat'
 import type { EmitResult } from '../types'
 import { applyUnknownFlags, extraSectionBlocks } from './passthrough'
 import {
@@ -73,16 +75,13 @@ export function emitKickstart(spec: InstallSpec): EmitResult {
     .replace(/\n{3,}/g, '\n\n')
     .trimEnd()}\n`
 
-  const diagnostics =
-    spec.security.apparmor !== 'disabled'
-      ? [
-          {
-            severity: 'warning' as const,
-            field: 'security.apparmor',
-            message: 'AppArmor is not configurable from Kickstart; setting ignored on this target.',
-          },
-        ]
-      : []
+  // Warn-only for InstallSpec features Kickstart cannot express (e.g. AppArmor),
+  // and only when they diverge from default (intent) — never worked around.
+  const diagnostics: Diagnostic[] = crossFormatDrops(spec, 'kickstart').map((d) => ({
+    severity: 'warning',
+    field: d.field,
+    message: d.message,
+  }))
 
   return {
     files: [{ filename: 'ks.cfg', content, language: 'kickstart' }],

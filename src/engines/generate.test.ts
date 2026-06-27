@@ -12,6 +12,7 @@ describe('generate', () => {
 
   it('merges engine warnings with validation diagnostics', () => {
     const s = freshDefaultSpec()
+    s.security.apparmor = 'complain' // divergent from default 'enforce' → fires the cross-format engine warning
     s.identity.rootPolicy = 'password' // validation error: no hash
     const fields = generate(s, 'kickstart').diagnostics.map((d) => d.field)
     expect(fields).toContain('security.apparmor') // engine warning

@@ -63,7 +63,8 @@
     "rawUserData": "Raw user-data (YAML)",
     "rawStorage": "Raw storage.config (YAML)",
     "rootPassword": "Root password",
-    "userPassword": "User password"
+    "userPassword": "User password",
+    "notEmitted": "Not emitted for {{format}}"
   },
   "password": {
     "set": "Set",

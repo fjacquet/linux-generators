@@ -49,16 +49,34 @@ describe('emitAutoinstall', () => {
     expect(out).toContain('password: secret')
   })
 
-  it('warns that SELinux and firewall are ignored on Ubuntu', () => {
-    const { diagnostics } = emitAutoinstall(minimalUbuntu)
-    expect(diagnostics.map((d) => d.field)).toContain('security.selinux')
-    expect(diagnostics.map((d) => d.field)).toContain('security.firewall')
+  it('stays silent on a default Ubuntu spec (warn-on-intent)', () => {
+    // minimalUbuntu keeps default SELinux/firewall and empty groups → no lost
+    // intent, so the DiagnosticsList is not pre-populated with cross-format noise.
+    const fields = emitAutoinstall(minimalUbuntu).diagnostics.map((d) => d.field)
+    // cover every autoinstall drop field so a regression on any can't slip through
+    expect(fields).not.toContain('security.selinux')
+    expect(fields).not.toContain('security.firewall')
+    expect(fields).not.toContain('packages.groups')
+    expect(fields).not.toContain('packages.repos')
+    expect(fields).not.toContain('identity.rootPolicy')
+  })
+
+  it('warns when SELinux and a customized firewall diverge from default on Ubuntu', () => {
+    const s = freshDefaultSpec()
+    Object.assign(s.target, { osFamily: 'ubuntu', distro: 'ubuntu', version: '24.04' })
+    // inject intent the target can't express: permissive SELinux (default 'enforcing'
+    // is silent) and a non-default active ruleset (default ['ssh'] is silent)
+    s.security.selinux = 'permissive'
+    s.security.firewall.services = ['ssh', 'http']
+    const fields = emitAutoinstall(s).diagnostics.map((d) => d.field)
+    expect(fields).toContain('security.selinux')
+    expect(fields).toContain('security.firewall')
   })
 
   it('warns when RHEL package groups are present on an Ubuntu target', () => {
     const s = freshDefaultSpec()
     Object.assign(s.target, { osFamily: 'ubuntu', distro: 'ubuntu', version: '24.04' })
-    s.packages.groups = ['@core']
+    s.packages.groups = ['@core'] // non-default, non-empty group set → lost intent on Ubuntu
     const { diagnostics } = emitAutoinstall(s)
     expect(diagnostics.map((d) => d.field)).toContain('packages.groups')
   })

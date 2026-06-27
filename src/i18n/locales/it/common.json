@@ -63,7 +63,8 @@
     "rawUserData": "user-data grezzo (YAML)",
     "rawStorage": "storage.config grezzo (YAML)",
     "rootPassword": "Password di root",
-    "userPassword": "Password utente"
+    "userPassword": "Password utente",
+    "notEmitted": "Non emesso per {{format}}"
   },
   "password": {
     "set": "Imposta",

@@ -1,3 +1,4 @@
+import { freshDefaultSpec } from '@engines/model'
 import { describe, expect, it } from 'vitest'
 import { hardenedRhel, KICKSTART_FIXTURES, minimalRhel } from '@/__fixtures__/sampleSpecs'
 import { emitKickstart } from './emitKickstart'
@@ -35,8 +36,17 @@ describe('emitKickstart', () => {
     expect(out).toContain('autopart --type=lvm --encrypted --passphrase=changeit')
   })
 
-  it('warns when AppArmor is set but the target is Kickstart', () => {
-    const { diagnostics } = emitKickstart(minimalRhel)
+  it('stays silent on a default RHEL spec (warn-on-intent)', () => {
+    // assert against the real default baseline (not a fixture that could drift):
+    // default AppArmor 'enforce' carries no lost intent → no cross-format noise
+    const fields = emitKickstart(freshDefaultSpec()).diagnostics.map((d) => d.field)
+    expect(fields).not.toContain('security.apparmor')
+  })
+
+  it('warns when AppArmor diverges from default on Kickstart', () => {
+    const s = freshDefaultSpec()
+    s.security.apparmor = 'complain' // default 'enforce' is silent; 'complain' is lost intent
+    const { diagnostics } = emitKickstart(s)
     expect(diagnostics).toContainEqual(
       expect.objectContaining({ severity: 'warning', field: 'security.apparmor' }),
     )

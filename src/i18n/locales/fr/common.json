@@ -63,7 +63,8 @@
     "rawUserData": "user-data brut (YAML)",
     "rawStorage": "storage.config brut (YAML)",
     "rootPassword": "Mot de passe root",
-    "userPassword": "Mot de passe utilisateur"
+    "userPassword": "Mot de passe utilisateur",
+    "notEmitted": "Non émis pour {{format}}"
   },
   "password": {
     "set": "Définir",

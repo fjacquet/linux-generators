@@ -1,6 +1,7 @@
 import { deepMerge } from '../../../utils/deepMerge'
 import type { InstallSpec } from '../../model/installSpec'
 import type { Diagnostic } from '../../types'
+import { crossFormatDrops } from '../crossFormat'
 import type { EmitResult } from '../types'
 import { buildEthernets, needsNetworkSection } from './netplan'
 import { fromYaml, toYaml } from './yaml'
@@ -41,53 +42,19 @@ function buildStorage(spec: InstallSpec, diagnostics: Diagnostic[]): unknown {
   return { layout }
 }
 
-/** Warn for InstallSpec features that the Autoinstall format cannot express.
- *  Warn-only: we never inject shell to fake parity. */
-function crossFormatWarnings(spec: InstallSpec): Diagnostic[] {
-  const out: Diagnostic[] = []
-  out.push({
-    severity: 'warning',
-    field: 'security.selinux',
-    message: 'SELinux is RHEL-only; ignored on Ubuntu, which enforces AppArmor.',
-  })
-  if (spec.security.firewall.enabled) {
-    out.push({
-      severity: 'warning',
-      field: 'security.firewall',
-      message: 'Autoinstall has no firewall key; configure ufw via late-commands if required.',
-    })
-  }
-  if (spec.packages.groups.length > 0) {
-    out.push({
-      severity: 'warning',
-      field: 'packages.groups',
-      message: 'Package groups (@…) are unsupported on Ubuntu; list individual packages instead.',
-    })
-  }
-  if (spec.packages.installUrl || spec.packages.repos.length > 0) {
-    out.push({
-      severity: 'warning',
-      field: 'packages.repos',
-      message: 'Kickstart url/repo entries are ignored on Ubuntu; set an APT mirror instead.',
-    })
-  }
-  if (spec.identity.rootPolicy === 'password') {
-    out.push({
-      severity: 'warning',
-      field: 'identity.rootPolicy',
-      message: 'Ubuntu locks the root account; configure the sudo user instead.',
-    })
-  }
-  return out
-}
-
 /**
  * Render an InstallSpec to an Ubuntu Autoinstall `user-data` file (cloud-config
  * wrapped). Pure: same spec → same bytes. The object is assembled in canonical
  * key order, then serialized by the `yaml` library.
  */
 export function emitAutoinstall(spec: InstallSpec): EmitResult {
-  const diagnostics = crossFormatWarnings(spec)
+  // Warn-only for InstallSpec features Autoinstall cannot express, and only when
+  // they diverge from default (intent) — we never inject shell to fake parity.
+  const diagnostics: Diagnostic[] = crossFormatDrops(spec, 'autoinstall').map((d) => ({
+    severity: 'warning',
+    field: d.field,
+    message: d.message,
+  }))
 
   const { primaryUser } = spec.identity
   const password =
