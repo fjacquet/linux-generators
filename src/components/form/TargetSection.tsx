@@ -1,4 +1,4 @@
-import { ARCHES, type InstallSpec } from '@engines/model'
+import { ARCHES, formatForOsFamily, type InstallSpec } from '@engines/model'
 import { useSpec } from '@hooks/useSpec'
 import { useGeneratorStore } from '@store/generatorStore'
 import { useTranslation } from 'react-i18next'
@@ -8,6 +8,8 @@ import { SelectField } from './fields'
 const DISTROS_BY_FAMILY: Record<InstallSpec['target']['osFamily'], string[]> = {
   rhel: ['rhel', 'fedora', 'rocky', 'alma'],
   ubuntu: ['ubuntu'],
+  // Debian ships a single distro id.
+  debian: ['debian'],
 }
 
 const DEFAULT_VERSION: Record<string, string> = {
@@ -16,6 +18,7 @@ const DEFAULT_VERSION: Record<string, string> = {
   rocky: '9',
   alma: '9',
   ubuntu: '24.04',
+  debian: '13',
 }
 
 export function TargetSection() {
@@ -26,7 +29,7 @@ export function TargetSection() {
 
   // Family ⇄ format is 1:1; delegate to the store so the two stay in sync.
   const changeFamily = (next: string) =>
-    chooseFormat(next === 'ubuntu' ? 'autoinstall' : 'kickstart')
+    chooseFormat(formatForOsFamily(next as InstallSpec['target']['osFamily']))
 
   return (
     <CollapsibleSection id="target" title={t('section.target')}>
@@ -37,6 +40,7 @@ export function TargetSection() {
         options={[
           { value: 'rhel', label: 'RHEL / Fedora' },
           { value: 'ubuntu', label: 'Ubuntu' },
+          { value: 'debian', label: 'Debian' },
         ]}
       />
       <SelectField
@@ -94,6 +98,7 @@ function versionOptions(distro: string): { value: string; label: string }[] {
     alma: ['10', '9'],
     fedora: ['41', '40'],
     ubuntu: ['24.04', '22.04'],
+    debian: ['13', '12'],
   }
   return (versions[distro] ?? ['9']).map((v) => ({ value: v, label: v }))
 }

@@ -28,6 +28,15 @@ export function quirksFor(target: InstallSpec['target']): Quirks {
       unknownKeysFatal: versionNumber(target.version) >= 24.04,
     }
   }
+  if (target.osFamily === 'debian') {
+    // Preseed (debconf) has no authselect/netplan/strict-key concepts; the
+    // emitter doesn't read these, so neutral defaults are fine.
+    return {
+      authTool: 'authselect',
+      netplanVersion: 2,
+      unknownKeysFatal: false,
+    }
+  }
   // rhel family (rhel/fedora/rocky/alma): all supported versions use authselect.
   return {
     authTool: 'authselect',

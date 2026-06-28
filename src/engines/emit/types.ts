@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../types'
 
-export type ConfigLanguage = 'kickstart' | 'yaml'
+export type ConfigLanguage = 'kickstart' | 'yaml' | 'preseed'
 
 /** One generated file ready to preview and download. */
 export interface EmittedFile {

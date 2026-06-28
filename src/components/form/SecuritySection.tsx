@@ -10,7 +10,7 @@ export function SecuritySection() {
   const { t } = useTranslation()
   const [spec, update] = useSpec()
   const drops = useCrossFormatDrops()
-  const isUbuntu = spec.target.osFamily === 'ubuntu'
+  const isRhel = spec.target.osFamily === 'rhel'
   const { selinux, apparmor, firewall, sshHardening } = spec.security
 
   // Firewall is shown on both targets; when it's a divergent drop for the active
@@ -48,18 +48,7 @@ export function SecuritySection() {
 
   return (
     <CollapsibleSection id="security" title={t('section.security')}>
-      {isUbuntu ? (
-        <SelectField
-          label={t('field.apparmor')}
-          value={apparmor}
-          onChange={(v) =>
-            update((d) => {
-              d.security.apparmor = v as InstallSpec['security']['apparmor']
-            })
-          }
-          options={['enforce', 'complain', 'disabled'].map((m) => ({ value: m, label: m }))}
-        />
-      ) : (
+      {isRhel ? (
         <SelectField
           label={t('field.selinux')}
           value={selinux}
@@ -69,6 +58,17 @@ export function SecuritySection() {
             })
           }
           options={['enforcing', 'permissive', 'disabled'].map((m) => ({ value: m, label: m }))}
+        />
+      ) : (
+        <SelectField
+          label={t('field.apparmor')}
+          value={apparmor}
+          onChange={(v) =>
+            update((d) => {
+              d.security.apparmor = v as InstallSpec['security']['apparmor']
+            })
+          }
+          options={['enforce', 'complain', 'disabled'].map((m) => ({ value: m, label: m }))}
         />
       )}
       {drops.has('security.firewall') ? (

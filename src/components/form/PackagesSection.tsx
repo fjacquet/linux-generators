@@ -7,7 +7,7 @@ import { TextAreaField, TextField } from './fields'
 export function PackagesSection() {
   const { t } = useTranslation()
   const [spec, update] = useSpec()
-  const isUbuntu = spec.target.osFamily === 'ubuntu'
+  const isRhel = spec.target.osFamily === 'rhel'
 
   return (
     <CollapsibleSection id="packages" title={t('section.packages')}>
@@ -24,18 +24,7 @@ export function PackagesSection() {
           }
         />
       </div>
-      {isUbuntu ? (
-        <TextField
-          label={t('field.aptMirror')}
-          value={spec.packages.aptMirror}
-          placeholder="http://archive.ubuntu.com/ubuntu"
-          onChange={(v) =>
-            update((d) => {
-              d.packages.aptMirror = v
-            })
-          }
-        />
-      ) : (
+      {isRhel ? (
         <>
           <div className="sm:col-span-2">
             <TextAreaField
@@ -61,6 +50,21 @@ export function PackagesSection() {
             }
           />
         </>
+      ) : (
+        <TextField
+          label={t('field.aptMirror')}
+          value={spec.packages.aptMirror}
+          placeholder={
+            spec.target.osFamily === 'debian'
+              ? 'http://deb.debian.org/debian'
+              : 'http://archive.ubuntu.com/ubuntu'
+          }
+          onChange={(v) =>
+            update((d) => {
+              d.packages.aptMirror = v
+            })
+          }
+        />
       )}
     </CollapsibleSection>
   )

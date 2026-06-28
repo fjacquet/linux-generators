@@ -8,6 +8,9 @@ describe('generate', () => {
     const ubuntu = freshDefaultSpec()
     Object.assign(ubuntu.target, { osFamily: 'ubuntu', distro: 'ubuntu', version: '24.04' })
     expect(generate(ubuntu, 'autoinstall').files[0]?.filename).toBe('user-data')
+    const debian = freshDefaultSpec()
+    Object.assign(debian.target, { osFamily: 'debian', distro: 'debian', version: '13' })
+    expect(generate(debian, 'preseed').files[0]?.filename).toBe('preseed.cfg')
   })
 
   it('merges engine warnings with validation diagnostics', () => {

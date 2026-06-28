@@ -52,7 +52,8 @@ describe('emitAutoinstall variants', () => {
       d.identity.rootPolicy = 'password'
     })
     const fields = emitAutoinstall(s).diagnostics.map((x) => x.field)
-    expect(fields).toContain('packages.repos')
+    // installUrl-only spec anchors the drop on installUrl (not repos)
+    expect(fields).toContain('packages.installUrl')
     expect(fields).toContain('identity.rootPolicy')
   })
 

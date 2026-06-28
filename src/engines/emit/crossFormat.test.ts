@@ -1,4 +1,4 @@
-import { freshDefaultSpec, type InstallSpec } from '@engines/model'
+import { freshDefaultSpec, type InstallSpec, type TargetFormat } from '@engines/model'
 import { describe, expect, it } from 'vitest'
 import { crossFormatDrops } from './crossFormat'
 
@@ -8,7 +8,7 @@ const spec = (mutate?: (d: InstallSpec) => void): InstallSpec => {
   return s
 }
 
-const fields = (s: InstallSpec, format: 'kickstart' | 'autoinstall'): string[] =>
+const fields = (s: InstallSpec, format: TargetFormat): string[] =>
   crossFormatDrops(s, format).map((d) => d.field)
 
 describe('crossFormatDrops', () => {
@@ -85,7 +85,8 @@ describe('crossFormatDrops', () => {
       const url = spec((d) => {
         d.packages.installUrl = 'https://mirror.example/os'
       })
-      expect(fields(url, 'autoinstall')).toContain('packages.repos')
+      // an installUrl-only spec anchors the drop on installUrl, not repos
+      expect(fields(url, 'autoinstall')).toContain('packages.installUrl')
 
       const repo = spec((d) => {
         d.packages.repos = [{ name: 'extras', baseurl: 'https://mirror.example/extras' }]
@@ -128,6 +129,48 @@ describe('crossFormatDrops', () => {
         d.identity.rootPolicy = 'password'
       })
       expect(crossFormatDrops(s, 'kickstart')).toEqual([])
+    })
+  })
+
+  describe('preseed (Debian)', () => {
+    it('returns nothing for a default Debian spec', () => {
+      expect(crossFormatDrops(spec(), 'preseed')).toEqual([])
+    })
+
+    it('warns on the same RHEL-only fields as autoinstall (selinux / groups / repos)', () => {
+      const selinux = spec((d) => {
+        d.security.selinux = 'permissive'
+      })
+      expect(fields(selinux, 'preseed')).toContain('security.selinux')
+
+      const groups = spec((d) => {
+        d.packages.groups = ['@core']
+      })
+      expect(fields(groups, 'preseed')).toContain('packages.groups')
+
+      const url = spec((d) => {
+        d.packages.installUrl = 'https://mirror.example/os'
+      })
+      expect(fields(url, 'preseed')).toContain('packages.installUrl')
+    })
+
+    it('addresses the diagnostic to Debian, not Ubuntu', () => {
+      const s = spec((d) => {
+        d.security.selinux = 'permissive'
+      })
+      expect(crossFormatDrops(s, 'preseed')[0]?.message).toContain('Debian')
+    })
+
+    it('does NOT drop firewall, AppArmor, or root password (preseed emits all three)', () => {
+      const s = spec((d) => {
+        d.security.firewall.services = ['ssh', 'http'] // emitted via ufw late_command
+        d.security.apparmor = 'complain' // emitted via aa-* late_command
+        d.identity.rootPolicy = 'password' // native passwd/root-password-crypted
+      })
+      const f = fields(s, 'preseed')
+      expect(f).not.toContain('security.firewall')
+      expect(f).not.toContain('security.apparmor')
+      expect(f).not.toContain('identity.rootPolicy')
     })
   })
 })
