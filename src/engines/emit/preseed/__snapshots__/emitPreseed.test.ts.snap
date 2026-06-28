@@ -119,7 +119,7 @@ d-i mirror/http/directory string /debian
 d-i pkgsel/include string openssh-server sudo
 d-i pkgsel/upgrade select none
 tasksel tasksel/first multiselect standard
-d-i preseed/late_command string mkdir -p /target/home/admin/.ssh; echo "ssh-ed25519 AAAADEBIAN admin@host" >> /target/home/admin/.ssh/authorized_keys; in-target chown -R admin:admin /home/admin/.ssh; chmod 700 /target/home/admin/.ssh; chmod 600 /target/home/admin/.ssh/authorized_keys; sed -i 's/^#\\?PermitRootLogin.*/PermitRootLogin no/' /target/etc/ssh/sshd_config; sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication no/' /target/etc/ssh/sshd_config; in-target env DEBIAN_FRONTEND=noninteractive apt-get install -y ufw; in-target ufw allow ssh; in-target ufw --force enable
+d-i preseed/late_command string mkdir -p /target/home/admin/.ssh; echo 'ssh-ed25519 AAAADEBIAN admin@host' >> /target/home/admin/.ssh/authorized_keys; in-target chown -R admin:admin /home/admin/.ssh; chmod 700 /target/home/admin/.ssh; chmod 600 /target/home/admin/.ssh/authorized_keys; sed -i 's/^#\\?PermitRootLogin.*/PermitRootLogin no/' /target/etc/ssh/sshd_config; sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication no/' /target/etc/ssh/sshd_config; in-target env DEBIAN_FRONTEND=noninteractive apt-get install -y ufw; in-target ufw allow ssh; in-target ufw --force enable
 d-i grub-installer/only_debian boolean true
 d-i grub-installer/with_other_os boolean true
 d-i grub-installer/bootdev string default

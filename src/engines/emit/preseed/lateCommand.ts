@@ -3,6 +3,11 @@ import type { InstallSpec } from '../../model/installSpec'
 // Pure helpers — each returns the ordered shell fragments for its section.
 // Fragments are joined with '; ' and wrapped in a single d-i late_command line.
 
+// Single-quote a value for safe literal embedding in the shell string: a key
+// comment containing ", `, $, ; or whitespace cannot break the fragment or
+// execute as root during install. Embedded single quotes are escaped as '\''.
+const shQuote = (s: string): string => `'${s.replace(/'/g, "'\\''")}'`
+
 // Install one account's authorized_keys. File ops run in the installer env, so
 // `sshDir` is the /target-prefixed path; the optional chown must run inside the
 // chroot (`in-target`), so it takes the in-system path. Root owns /root → no chown.
@@ -14,7 +19,7 @@ function authorizedKeysFragments(
   if (keys.length === 0) return []
   return [
     `mkdir -p ${sshDir}`,
-    ...keys.map((k) => `echo "${k}" >> ${sshDir}/authorized_keys`),
+    ...keys.map((k) => `echo ${shQuote(k)} >> ${sshDir}/authorized_keys`),
     ...(chown ? [`in-target chown -R ${chown.user}:${chown.user} ${chown.dir}`] : []),
     `chmod 700 ${sshDir}`,
     `chmod 600 ${sshDir}/authorized_keys`,

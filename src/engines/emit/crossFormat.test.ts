@@ -1,4 +1,4 @@
-import { freshDefaultSpec, type InstallSpec } from '@engines/model'
+import { freshDefaultSpec, type InstallSpec, type TargetFormat } from '@engines/model'
 import { describe, expect, it } from 'vitest'
 import { crossFormatDrops } from './crossFormat'
 
@@ -8,7 +8,7 @@ const spec = (mutate?: (d: InstallSpec) => void): InstallSpec => {
   return s
 }
 
-const fields = (s: InstallSpec, format: 'kickstart' | 'autoinstall'): string[] =>
+const fields = (s: InstallSpec, format: TargetFormat): string[] =>
   crossFormatDrops(s, format).map((d) => d.field)
 
 describe('crossFormatDrops', () => {
@@ -85,7 +85,8 @@ describe('crossFormatDrops', () => {
       const url = spec((d) => {
         d.packages.installUrl = 'https://mirror.example/os'
       })
-      expect(fields(url, 'autoinstall')).toContain('packages.repos')
+      // an installUrl-only spec anchors the drop on installUrl, not repos
+      expect(fields(url, 'autoinstall')).toContain('packages.installUrl')
 
       const repo = spec((d) => {
         d.packages.repos = [{ name: 'extras', baseurl: 'https://mirror.example/extras' }]
@@ -150,7 +151,7 @@ describe('crossFormatDrops', () => {
       const url = spec((d) => {
         d.packages.installUrl = 'https://mirror.example/os'
       })
-      expect(fields(url, 'preseed')).toContain('packages.repos')
+      expect(fields(url, 'preseed')).toContain('packages.installUrl')
     })
 
     it('addresses the diagnostic to Debian, not Ubuntu', () => {

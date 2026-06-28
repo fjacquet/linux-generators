@@ -44,4 +44,31 @@ describe('validatePreseed', () => {
     expect(f).toContain('identity.rootPasswordCrypt')
     expect(f).toContain('storage.encryption.passphrase')
   })
+
+  it('rootPolicy=sshkey with no root keys is NOT a login method (still unreachable)', () => {
+    // the policy toggle alone doesn't make root reachable — there must be keys
+    const s = debian((d) => {
+      d.identity.rootPolicy = 'sshkey'
+      d.identity.rootSshKeys = []
+      d.identity.primaryUser.sshKeys = []
+    })
+    expect(fields(s)).toContain('identity.primaryUser.sshKeys')
+  })
+
+  it('rootPolicy=sshkey WITH root keys gives a login path', () => {
+    const s = debian((d) => {
+      d.identity.rootPolicy = 'sshkey'
+      d.identity.rootSshKeys = ['ssh-ed25519 AAAA root@host']
+      d.identity.primaryUser.sshKeys = []
+    })
+    expect(fields(s)).not.toContain('identity.primaryUser.sshKeys')
+  })
+
+  it('allowing SSH password auth alone (no password set) is not a login method', () => {
+    const s = debian((d) => {
+      d.identity.primaryUser.sshKeys = []
+      d.security.sshHardening.passwordAuth = true
+    })
+    expect(fields(s)).toContain('identity.primaryUser.sshKeys')
+  })
 })

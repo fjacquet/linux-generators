@@ -27,9 +27,28 @@ describe('buildLateCommand', () => {
     expect(out[0]).toMatch(/^d-i preseed\/late_command string /)
     expect(out[0]).toContain('mkdir -p /target/home/alice/.ssh')
     expect(out[0]).toContain(
-      'echo "ssh-ed25519 AAAAC3Nz alice@host" >> /target/home/alice/.ssh/authorized_keys',
+      "echo 'ssh-ed25519 AAAAC3Nz alice@host' >> /target/home/alice/.ssh/authorized_keys",
     )
     expect(out[0]).toContain('in-target chown -R alice:alice /home/alice/.ssh')
+  })
+
+  it('shell-quotes key material so a metacharacter-laden comment cannot break out', () => {
+    const out = buildLateCommand(
+      makeSpec((s) => {
+        s.identity.primaryUser.name = 'alice'
+        // a comment with ", $, ` and ; — must end up safely single-quoted, not executed
+        s.identity.primaryUser.sshKeys = ['ssh-ed25519 AAAA evil@host"; rm -rf / #`$(id)`']
+        s.security.firewall.enabled = false
+        s.security.sshHardening.permitRootLogin = true
+        s.security.sshHardening.passwordAuth = true
+        s.security.apparmor = 'enforce'
+      }),
+    )
+    expect(out[0]).toContain(
+      "echo 'ssh-ed25519 AAAA evil@host\"; rm -rf / #`$(id)`' >> /target/home/alice/.ssh/authorized_keys",
+    )
+    // the vulnerable double-quote echo form is gone — the key is single-quoted
+    expect(out[0]).not.toContain('echo "')
   })
 
   it('rootPolicy=sshkey → root keys installed under /target/root/.ssh with no chown', () => {
@@ -48,7 +67,7 @@ describe('buildLateCommand', () => {
     expect(out).toHaveLength(1)
     expect(out[0]).toContain('mkdir -p /target/root/.ssh')
     expect(out[0]).toContain(
-      'echo "ssh-ed25519 AAAAROOT root@host" >> /target/root/.ssh/authorized_keys',
+      "echo 'ssh-ed25519 AAAAROOT root@host' >> /target/root/.ssh/authorized_keys",
     )
     expect(out[0]).toContain('chmod 700 /target/root/.ssh')
     expect(out[0]).toContain('chmod 600 /target/root/.ssh/authorized_keys')

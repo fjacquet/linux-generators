@@ -35,22 +35,21 @@ export function validatePreseed(spec: InstallSpec): Diagnostic[] {
     }
   })
 
-  // Can you log in? locked root + no user password + no key + no SSH password
-  // auth ⇒ the installed system is unreachable.
+  // Can you actually log in? A login path needs a real credential, not just a
+  // policy toggle: a user SSH key, a user password hash, or a root account whose
+  // matching credential (password hash / SSH key) is actually present. Allowing
+  // SSH password auth is not itself a credential, and selecting rootPolicy
+  // 'password'/'sshkey' without the hash/keys leaves root unreachable.
   const hasPassword = user.passwordMode === 'hashed' && Boolean(user.passwordCrypt)
   const rootReachable =
-    spec.identity.rootPolicy === 'password' || spec.identity.rootPolicy === 'sshkey'
-  if (
-    !hasPassword &&
-    user.sshKeys.length === 0 &&
-    !spec.security.sshHardening.passwordAuth &&
-    !rootReachable
-  ) {
+    (spec.identity.rootPolicy === 'password' && Boolean(spec.identity.rootPasswordCrypt)) ||
+    (spec.identity.rootPolicy === 'sshkey' && spec.identity.rootSshKeys.length > 0)
+  if (!hasPassword && user.sshKeys.length === 0 && !rootReachable) {
     d.push({
       severity: 'error',
       field: 'identity.primaryUser.sshKeys',
       message:
-        'No login method: set a password, add an SSH key, allow SSH password auth, or enable a root login.',
+        'No login method: add an SSH key, set a user password, or configure a reachable root account (password hash or SSH key).',
     })
   }
   if (user.passwordMode === 'hashed' && !user.passwordCrypt) {

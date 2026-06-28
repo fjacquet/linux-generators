@@ -43,7 +43,8 @@ function aptFamilyDrops(spec: InstallSpec, osName: string): CrossFormatDrop[] {
   }
   if (packages.installUrl !== '' || packages.repos.length > 0) {
     out.push({
-      field: 'packages.repos',
+      // anchor the note on whichever field actually carries the intent
+      field: packages.installUrl !== '' ? 'packages.installUrl' : 'packages.repos',
       message: `Kickstart url/repo entries are ignored on ${osName}; set an APT mirror instead.`,
     })
   }
