@@ -59,14 +59,12 @@ const VECTORS: { password: string; salt: string; rounds?: number; expected: stri
 ]
 
 describe('sha512crypt vectors', () => {
-  it.each(VECTORS)('matches glibc for "$password" / "$salt"', ({
-    password,
-    salt,
-    rounds,
-    expected,
-  }) => {
-    expect(sha512crypt(password, salt, rounds)).toBe(expected)
-  })
+  it.each(VECTORS)(
+    'matches glibc for "$password" / "$salt"',
+    ({ password, salt, rounds, expected }) => {
+      expect(sha512crypt(password, salt, rounds)).toBe(expected)
+    },
+  )
 })
 
 describe('sha512crypt properties', () => {
