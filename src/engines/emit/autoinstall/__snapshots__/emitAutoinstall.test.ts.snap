@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`emitAutoinstall > golden output: 'encrypted-ubuntu' 1`] = `
+exports[`emitAutoinstall > golden output: encrypted-ubuntu 1`] = `
 "#cloud-config
 autoinstall:
   version: 1
@@ -29,7 +29,7 @@ autoinstall:
 "
 `;
 
-exports[`emitAutoinstall > golden output: 'minimal-ubuntu' 1`] = `
+exports[`emitAutoinstall > golden output: minimal-ubuntu 1`] = `
 "#cloud-config
 autoinstall:
   version: 1
@@ -55,7 +55,7 @@ autoinstall:
 "
 `;
 
-exports[`emitAutoinstall > golden output: 'static-ubuntu' 1`] = `
+exports[`emitAutoinstall > golden output: static-ubuntu 1`] = `
 "#cloud-config
 autoinstall:
   version: 1
