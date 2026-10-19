@@ -10,6 +10,10 @@ section rather than letting it accumulate indefinitely.
 
 ## [Unreleased]
 
+### Security
+
+- Full npm refresh: `source-map-js` 1.2.1 → 1.2.2 (GHSA-68fv-2mgg-jv7q, dev-only), including the pending `i18next`, `react-i18next` and Biome bumps.
+
 ## [0.5.1] - 2026-10-02
 
 ### Changed
