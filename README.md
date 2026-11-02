@@ -29,14 +29,14 @@ npm run dev      # http://localhost:5173/linux-generators/
 
 ## Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `npm run dev` | Vite dev server |
-| `npm run build` | Type-check + production build |
-| `npm run typecheck` | `tsc --noEmit` (app + tests) |
-| `npm run lint` | Biome check |
-| `npm run test:run` | Vitest (engines gated ≥75%) |
-| `npm run test:coverage` | Coverage report |
+| Script                  | Purpose                       |
+| ----------------------- | ----------------------------- |
+| `npm run dev`           | Vite dev server               |
+| `npm run build`         | Type-check + production build |
+| `npm run typecheck`     | `tsc --noEmit` (app + tests)  |
+| `npm run lint`          | Biome check                   |
+| `npm run test:run`      | Vitest (engines gated ≥75%)   |
+| `npm run test:coverage` | Coverage report               |
 
 ## Documentation
 

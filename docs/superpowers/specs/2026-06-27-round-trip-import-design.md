@@ -17,27 +17,27 @@ choosing an architecture that preserves the project's identity: pure functions, 
 
 ## Locked decisions
 
-| Topic | Decision |
-|---|---|
-| Formats (first cut) | **Both** Kickstart and Autoinstall. |
-| Fidelity promise | **High-fidelity round-trip** = "nothing silently lost." Delivered as: map what the model knows → preserve everything else **verbatim** in passthrough → **re-emit and diff** against the original as proof. |
-| Architecture | **Approach B — Spec + typed passthrough.** Pure `parse → spec`; un-modeled constructs go into typed passthrough fields; re-emit = the existing `emit(spec)` + a deterministic passthrough merge. Not byte-exact: comments and the ordering of *known* directives are canonicalized; the diff makes that visible. |
-| Import UX | **Panel → review → confirm.** Paste box + file picker + drag-drop; on parse show a review (mapped count, passthrough count, fidelity badge, diff); Confirm replaces the form, Cancel discards. Non-destructive until confirmed. |
-| Format detection | Auto-detect on input (autoinstall: `#cloud-config` / `autoinstall:`; kickstart: bare directives + `%`-sections), with a manual override. |
-| Honest lossy point | Comments and original ordering of *known* directives are not preserved (Approach B). Every semantic value and every un-modeled construct **is** preserved. Byte-exact (Approach A, CST overlay) is explicitly out of scope. |
+| Topic               | Decision                                                                                                                                                                                                                                                                                                         |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Formats (first cut) | **Both** Kickstart and Autoinstall.                                                                                                                                                                                                                                                                              |
+| Fidelity promise    | **High-fidelity round-trip** = "nothing silently lost." Delivered as: map what the model knows → preserve everything else **verbatim** in passthrough → **re-emit and diff** against the original as proof.                                                                                                      |
+| Architecture        | **Approach B — Spec + typed passthrough.** Pure `parse → spec`; un-modeled constructs go into typed passthrough fields; re-emit = the existing `emit(spec)` + a deterministic passthrough merge. Not byte-exact: comments and the ordering of _known_ directives are canonicalized; the diff makes that visible. |
+| Import UX           | **Panel → review → confirm.** Paste box + file picker + drag-drop; on parse show a review (mapped count, passthrough count, fidelity badge, diff); Confirm replaces the form, Cancel discards. Non-destructive until confirmed.                                                                                  |
+| Format detection    | Auto-detect on input (autoinstall: `#cloud-config` / `autoinstall:`; kickstart: bare directives + `%`-sections), with a manual override.                                                                                                                                                                         |
+| Honest lossy point  | Comments and original ordering of _known_ directives are not preserved (Approach B). Every semantic value and every un-modeled construct **is** preserved. Byte-exact (Approach A, CST overlay) is explicitly out of scope.                                                                                      |
 
 ### Not in this design (deferred)
 
 - **Comment / ordering preservation** (would require Approach A's CST overlay — a different, larger project).
 - **Preseed / Agama import** (no emit engines for those formats yet).
-- **The format-aware field policy** ("contextual fields + warn-on-intent") — a related but *independent*
+- **The format-aware field policy** ("contextual fields + warn-on-intent") — a related but _independent_
   improvement to the existing app, captured as its own follow-up spec.
 - Streaming / partial parsing; importing multi-document files.
 
 ## Core principle: consume-and-keep-the-remainder
 
 Both parsers default to **preserve**; mapping is the opt-in. Anything a handler does not explicitly
-claim falls into passthrough automatically. This makes "nothing silently lost" *structural* rather
+claim falls into passthrough automatically. This makes "nothing silently lost" _structural_ rather
 than a checklist someone must keep complete. The `roundTrip` `lossy` classification (below) is the
 tripwire that turns any modeling gap into a visible, testable failure instead of a silent drop.
 
@@ -69,7 +69,7 @@ type ImportResult =
 
 type FidelityReport = {
   fidelity: 'exact' | 'semantic' | 'lossy'
-  diff: DiffLine[]          // for display: original ↔ re-emitted
+  diff: DiffLine[] // for display: original ↔ re-emitted
   mappedCount: number
   passthroughCount: number
 }
@@ -83,7 +83,7 @@ as pure functions like every other engine.
 
 ### Resilience — soft-fail mapping, hard-fail only on garbage
 
-A single odd value must never reject the whole file (the user imported it precisely to *fix* it). So
+A single odd value must never reject the whole file (the user imported it precisely to _fix_ it). So
 mapping is resilient, not all-or-nothing:
 
 - Each field handler validates its candidate value against the relevant Zod **sub-schema**
@@ -103,21 +103,35 @@ Extend `InstallSpec` with one optional, default-empty field. Backward-compatible
 with empty defaults; `schemaVersion` stays `1` (no migration).
 
 ```ts
-const Passthrough = z.object({
-  kickstart: z.object({
-    extraCommands: z.array(z.string()).default([]),                 // whole commands we don't model (zerombr, module …)
-    // `index` = the 0-based occurrence of `command` in the file (e.g. the 2nd `network` line),
-    // so re-emit appends the extra flags to the RIGHT instance — multiple network/part lines disambiguate.
-    unknownFlags:  z.array(z.object({ command: z.string(), index: z.number().int().min(0), flags: z.array(z.string()) })).default([]),
-    extraSections: z.array(z.object({ header: z.string(), body: z.string() })).default([]), // %addon, %anaconda …
-    // All-or-nothing storage: when set, these verbatim partitioning lines (clearpart/part/logvol/
-    // volgroup/raid/btrfs, original order) REPLACE the engine's own storage output. Empty = engine-generated.
-    rawStorage:    z.array(z.string()).default([]),
-  }).prefault({}),
-  autoinstall: z.object({
-    extraKeys: z.record(z.string(), z.unknown()).default({}),        // unknown autoinstall keys (snaps, oem, kernel …)
-  }).prefault({}),
-}).prefault({})
+const Passthrough = z
+  .object({
+    kickstart: z
+      .object({
+        extraCommands: z.array(z.string()).default([]), // whole commands we don't model (zerombr, module …)
+        // `index` = the 0-based occurrence of `command` in the file (e.g. the 2nd `network` line),
+        // so re-emit appends the extra flags to the RIGHT instance — multiple network/part lines disambiguate.
+        unknownFlags: z
+          .array(
+            z.object({
+              command: z.string(),
+              index: z.number().int().min(0),
+              flags: z.array(z.string()),
+            }),
+          )
+          .default([]),
+        extraSections: z.array(z.object({ header: z.string(), body: z.string() })).default([]), // %addon, %anaconda …
+        // All-or-nothing storage: when set, these verbatim partitioning lines (clearpart/part/logvol/
+        // volgroup/raid/btrfs, original order) REPLACE the engine's own storage output. Empty = engine-generated.
+        rawStorage: z.array(z.string()).default([]),
+      })
+      .prefault({}),
+    autoinstall: z
+      .object({
+        extraKeys: z.record(z.string(), z.unknown()).default({}), // unknown autoinstall keys (snaps, oem, kernel …)
+      })
+      .prefault({}),
+  })
+  .prefault({})
 // InstallSpecSchema gains:  passthrough: Passthrough
 ```
 
@@ -131,7 +145,7 @@ content) are kept distinct so re-export never confuses the two.
   100% canonical, never spliced); append `extraCommands` as a block in the command area;
   `applyUnknownFlags(commands, unknownFlags)` appends each entry's flags to the **Nth** rendered line of
   that command (the `index` field), so multiple `network`/`part` instances stay disambiguated; re-emit
-  `extraSections` verbatim after `%pre`/`%post`. On import, `%pre`/`%post` *bodies* map to the existing
+  `extraSections` verbatim after `%pre`/`%post`. On import, `%pre`/`%post` _bodies_ map to the existing
   `scripts.rawKickstartPre/Post`.
 - **Autoinstall** (`emitAutoinstall`): `deepMerge(modeled, extraKeys)` with a strict policy — **two plain
   objects merge recursively; for any other pairing (array or primitive on either side), the modeled value
@@ -145,7 +159,7 @@ content) are kept distinct so re-export never confuses the two.
 ### Kickstart (`import/kickstart/`)
 
 - `tokenize.ts`: **first joins line continuations** — a line ending in a trailing backslash (`\`) is
-  merged with the next into one logical line *before* any classification (Kickstart commonly splits long
+  merged with the next into one logical line _before_ any classification (Kickstart commonly splits long
   `network`/`user`/`part` lines this way). Then lines → ordered nodes. Sections (`%packages`, `%pre`,
   `%post`, `%addon`, `%anaconda`, …) collect their body until `%end`. Comments (`#…`) and blanks are their
   own nodes. Otherwise: a command (first word = name). The tokenizer assigns each command node its 0-based
@@ -166,7 +180,7 @@ content) are kept distinct so re-export never confuses the two.
   `%packages` body → `groups` (`@…`, `@^…`) + `individual`, preserving excludes (`-pkg`).
 
   **Storage — all-or-nothing rule.** Partitioning is order-dependent and crashes Anaconda if spliced. So
-  the parser models storage *only* when the whole layout is expressible as a guided scheme: a lone
+  the parser models storage _only_ when the whole layout is expressible as a guided scheme: a lone
   `autopart [--type=lvm|plain] [--encrypted]` (+ `clearpart`) → `storage.scheme`/`encryption`/`wipe`. The
   moment it sees **any** partitioning command it can't fully model (`part`, `logvol`, `volgroup`, `raid`,
   `btrfs`, or an `autopart` carrying unknown flags), it abandons storage modeling entirely: leaves
@@ -183,16 +197,16 @@ content) are kept distinct so re-export never confuses the two.
   `identity`→network.hostname + primaryUser, `ssh`→install-server / allow-pw→sshHardening.passwordAuth /
   authorized-keys→primaryUser.sshKeys, `storage.layout.name`→scheme (lvm→autopart-lvm, direct→autopart-plain;
   unknown names are preserved verbatim in extraKeys + warned, never coerced to LVM)
-  + password→encryption, `storage.config`→rawAutoinstallStorage, `network.ethernets`→interfaces,
-  `packages`→individual, `apt.primary[].uri`→aptMirror, `early/late-commands`→scripts, `user-data`→
-  rawAutoinstallUserData. `shutdown` is **not** modeled but is preserved in `extraKeys` (not consumed),
-  so custom values like `poweroff` round-trip via the emitter's passthrough.
-  Remainder rule (cleaner here): **deep-clone the parsed object, delete every path consumed at the *leaf*
-  level, and whatever remains *is* `extraKeys`** — so `snaps:`, `oem:`, `kernel:`, unknown sub-keys all
-  survive without enumerating them. Deletion is leaf-precise: consuming `identity.username` and
-  `identity.password` deletes only those two leaves, so an unmodeled sibling like `identity.shell` stays in
-  `extraKeys`; a parent object is removed only once it has been emptied of all children. This is what makes
-  partial consumption of a key (e.g. `identity`, `ssh`) safe.
+  - password→encryption, `storage.config`→rawAutoinstallStorage, `network.ethernets`→interfaces,
+    `packages`→individual, `apt.primary[].uri`→aptMirror, `early/late-commands`→scripts, `user-data`→
+    rawAutoinstallUserData. `shutdown` is **not** modeled but is preserved in `extraKeys` (not consumed),
+    so custom values like `poweroff` round-trip via the emitter's passthrough.
+    Remainder rule (cleaner here): **deep-clone the parsed object, delete every path consumed at the _leaf_
+  level, and whatever remains _is_ `extraKeys`** — so `snaps:`, `oem:`, `kernel:`, unknown sub-keys all
+    survive without enumerating them. Deletion is leaf-precise: consuming `identity.username` and
+    `identity.password` deletes only those two leaves, so an unmodeled sibling like `identity.shell` stays in
+    `extraKeys`; a parent object is removed only once it has been emptied of all children. This is what makes
+    partial consumption of a key (e.g. `identity`, `ssh`) safe.
 
 ### Version resilience (24.04 → 26.04 and beyond)
 
@@ -230,9 +244,9 @@ Ubuntu version list is a one-line cosmetic follow-up, independent of import.)
   show the parse error.
 - `ImportReview.tsx` — renders the `FidelityReport` (badge, counts, diff) + reuses `DiagnosticsList`.
   **Confirm** → `loadProfile(result.spec)` + success toast; **Cancel** → close, form untouched. Includes a
-  short reassurance line on what *is* preserved verbatim: comments and content inside `%pre`/`%post`/`%addon`
+  short reassurance line on what _is_ preserved verbatim: comments and content inside `%pre`/`%post`/`%addon`
   sections and inside un-modeled Autoinstall keys round-trip exactly (they map to raw strings / `extraKeys`);
-  only comments attached to *individual known directives* are dropped (visible in the diff).
+  only comments attached to _individual known directives_ are dropped (visible in the diff).
 - `ProfileBar` gains an **"Import install file…"** action, distinct from the existing JSON-profile import
   (relabel that one **"Import profile (JSON)"** to remove ambiguity). No new store action — reuse `loadProfile`.
 - i18n: new keys for the panel/review/labels across en/fr/de/it, under the existing key-parity gate.
@@ -250,19 +264,19 @@ Ubuntu version list is a one-line cosmetic follow-up, independent of import.)
 - **Emit-merge tests**: each passthrough bucket re-emits correctly (extra commands block; unknown flags
   appended to the right line; extra sections after pre/post; extraKeys deep-merged with modeled keys winning).
 - **Edge-case tests (from review):**
-  - *Multi-instance flags* — two `network` lines, an unknown flag on only the **second**, asserts re-emit
+  - _Multi-instance flags_ — two `network` lines, an unknown flag on only the **second**, asserts re-emit
     appends it to the second `network` line only (index correlation).
-  - *All-or-nothing storage* — a `volgroup`/`logvol` layout imports with empty `storage.partitions`,
+  - _All-or-nothing storage_ — a `volgroup`/`logvol` layout imports with empty `storage.partitions`,
     `scheme='manual'`, all partitioning lines in `rawStorage`; re-emit contains exactly one `clearpart` and
     the verbatim layout (no engine-spliced partitions, no duplicate `clearpart`).
-  - *Line continuations* — a `network … \` split across lines tokenizes to one logical command.
-  - *deepMerge policy* — modeled array (`late-commands`) wins over an `extraKeys` array of the same path
+  - _Line continuations_ — a `network … \` split across lines tokenizes to one logical command.
+  - _deepMerge policy_ — modeled array (`late-commands`) wins over an `extraKeys` array of the same path
     (no concatenation); nested objects merge.
-  - *Leaf-level deletion* — `identity` with a consumed `username` and an unmodeled `shell` keeps `shell`
+  - _Leaf-level deletion_ — `identity` with a consumed `username` and an unmodeled `shell` keeps `shell`
     in `extraKeys`.
-  - *Soft-fail* — a file with one invalid timezone imports `ok` with a `warning` diagnostic and the field
+  - _Soft-fail_ — a file with one invalid timezone imports `ok` with a `warning` diagnostic and the field
     reset to default (whole import not rejected).
-  - *LCS cap* — a >1000-line input returns a diff via the fallback path without invoking LCS.
+  - _LCS cap_ — a >1000-line input returns a diff via the fallback path without invoking LCS.
 - **Negative/edge**: malformed YAML → `{ ok: false, error }` + graceful toast; empty/garbage input; detector
   low-confidence path.
 - Coverage: `engines/import/**` and `utils/diff.ts` fall under the existing ≥75% gate
