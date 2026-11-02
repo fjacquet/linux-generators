@@ -120,7 +120,11 @@ describe('passthrough field', () => {
 
   it('round-trips unknownFlags with an occurrence index', () => {
     const spec = freshDefaultSpec()
-    spec.passthrough.kickstart.unknownFlags.push({ command: 'network', index: 1, flags: ['--bindto=mac'] })
+    spec.passthrough.kickstart.unknownFlags.push({
+      command: 'network',
+      index: 1,
+      flags: ['--bindto=mac'],
+    })
     const parsed = InstallSpecSchema.parse(spec)
     expect(parsed.passthrough.kickstart.unknownFlags[0]).toEqual({
       command: 'network',
@@ -141,34 +145,40 @@ Expected: FAIL — `passthrough` is undefined.
 Insert the `Passthrough` schema after the `Scripts` schema block (before `const Meta`):
 
 ```ts
-const Passthrough = z.object({
-  kickstart: z
-    .object({
-      extraCommands: z.array(z.string()).default([]),
-      // index = the 0-based occurrence of `command` in the file, so re-emit appends to the right line
-      unknownFlags: z
-        .array(
-          z.object({ command: z.string(), index: z.number().int().min(0), flags: z.array(z.string()) }),
-        )
-        .default([]),
-      extraSections: z.array(z.object({ header: z.string(), body: z.string() })).default([]),
-      // all-or-nothing storage: verbatim partitioning lines that REPLACE engine storage output
-      rawStorage: z.array(z.string()).default([]),
-      // constant-directive slots ('mode'|'bootloader'|'services'|'firstboot'|'power'), captured
-      // only when the raw line differs from the emitter default (so minimal files stay idempotent)
-      constantLines: z.record(z.string(), z.string()).default({}),
-      // %packages/%pre/%post header lines (carry their flags verbatim)
-      packagesHeader: z.string().default('%packages'),
-      preHeader: z.string().default('%pre --log=/var/log/ks-pre.log'),
-      postHeader: z.string().default('%post --log=/var/log/ks-post.log'),
-    })
-    .prefault({}),
-  autoinstall: z
-    .object({
-      extraKeys: z.record(z.string(), z.unknown()).default({}),
-    })
-    .prefault({}),
-}).prefault({})
+const Passthrough = z
+  .object({
+    kickstart: z
+      .object({
+        extraCommands: z.array(z.string()).default([]),
+        // index = the 0-based occurrence of `command` in the file, so re-emit appends to the right line
+        unknownFlags: z
+          .array(
+            z.object({
+              command: z.string(),
+              index: z.number().int().min(0),
+              flags: z.array(z.string()),
+            }),
+          )
+          .default([]),
+        extraSections: z.array(z.object({ header: z.string(), body: z.string() })).default([]),
+        // all-or-nothing storage: verbatim partitioning lines that REPLACE engine storage output
+        rawStorage: z.array(z.string()).default([]),
+        // constant-directive slots ('mode'|'bootloader'|'services'|'firstboot'|'power'), captured
+        // only when the raw line differs from the emitter default (so minimal files stay idempotent)
+        constantLines: z.record(z.string(), z.string()).default({}),
+        // %packages/%pre/%post header lines (carry their flags verbatim)
+        packagesHeader: z.string().default('%packages'),
+        preHeader: z.string().default('%pre --log=/var/log/ks-pre.log'),
+        postHeader: z.string().default('%post --log=/var/log/ks-post.log'),
+      })
+      .prefault({}),
+    autoinstall: z
+      .object({
+        extraKeys: z.record(z.string(), z.unknown()).default({}),
+      })
+      .prefault({}),
+  })
+  .prefault({})
 ```
 
 Then add the field to `InstallSpecSchema` (after `meta: Meta,`):
@@ -295,7 +305,9 @@ import { freshDefaultSpec } from '../../model'
 import { fromYaml } from './yaml'
 import { emitAutoinstall } from './emitAutoinstall'
 
-const ai = (content: string) => (fromYaml(content.replace(/^#cloud-config\n/, '')) as { autoinstall: Record<string, unknown> }).autoinstall
+const ai = (content: string) =>
+  (fromYaml(content.replace(/^#cloud-config\n/, '')) as { autoinstall: Record<string, unknown> })
+    .autoinstall
 
 describe('emitAutoinstall passthrough', () => {
   it('deep-merges unknown extraKeys while modeled keys win', () => {
@@ -330,14 +342,13 @@ import { deepMerge } from '../../../utils/deepMerge'
 Replace the final assembly (the `autoinstall.shutdown = 'reboot'` line through the `content` line) with:
 
 ```ts
-  autoinstall.shutdown = 'reboot'
+autoinstall.shutdown = 'reboot'
 
-  const extraKeys = spec.passthrough.autoinstall.extraKeys
-  const merged =
-    Object.keys(extraKeys).length > 0 ? deepMerge(autoinstall, extraKeys) : autoinstall
+const extraKeys = spec.passthrough.autoinstall.extraKeys
+const merged = Object.keys(extraKeys).length > 0 ? deepMerge(autoinstall, extraKeys) : autoinstall
 
-  const stamp = spec.meta.buildStamp ? `# build-stamp: ${spec.meta.buildStamp}\n` : ''
-  const content = `#cloud-config\n${stamp}${toYaml({ autoinstall: merged })}`
+const stamp = spec.meta.buildStamp ? `# build-stamp: ${spec.meta.buildStamp}\n` : ''
+const content = `#cloud-config\n${stamp}${toYaml({ autoinstall: merged })}`
 ```
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -401,7 +412,9 @@ describe('emitKickstart passthrough', () => {
   it('appends extraCommands and extraSections verbatim', () => {
     const spec = freshDefaultSpec()
     spec.passthrough.kickstart.extraCommands = ['zerombr', 'module --name=idm --stream=DL1']
-    spec.passthrough.kickstart.extraSections = [{ header: '%addon com_redhat_kdump --enable', body: '' }]
+    spec.passthrough.kickstart.extraSections = [
+      { header: '%addon com_redhat_kdump --enable', body: '' },
+    ]
     const content = emitKickstart(spec).files[0].content
     expect(content).toContain('zerombr')
     expect(content).toContain('module --name=idm --stream=DL1')
@@ -443,9 +456,7 @@ export function applyUnknownFlags(commands: string[], unknownFlags: UnknownFlags
 
 /** Render extra %sections (header + optional body + %end) verbatim. Pure. */
 export function extraSectionBlocks(sections: ExtraSections): string[] {
-  return sections.flatMap(({ header, body }) =>
-    body ? [header, body, '%end'] : [header, '%end'],
-  )
+  return sections.flatMap(({ header, body }) => (body ? [header, body, '%end'] : [header, '%end']))
 }
 ```
 
@@ -460,43 +471,43 @@ import { applyUnknownFlags, extraSectionBlocks } from './passthrough'
 Replace the `commands` assembly and the `content` assembly. The storage line uses `rawStorage` when present; `applyUnknownFlags` wraps the array; `extraCommands` and `extraSectionBlocks` are appended:
 
 ```ts
-  const ks = spec.passthrough.kickstart
-  const storage = ks.rawStorage.length > 0 ? ks.rawStorage : storageLines(spec)
+const ks = spec.passthrough.kickstart
+const storage = ks.rawStorage.length > 0 ? ks.rawStorage : storageLines(spec)
 
-  const commands = applyUnknownFlags(
-    [
-      'text',
-      ...sourceLines(spec),
-      ...localeLines(spec),
-      ...networkLines(spec),
-      ...identityLines(spec),
-      ...storage,
-      bootloaderLine(spec),
-      ...securityLines(spec),
-      ...ks.extraCommands,
-      'firstboot --disable',
-      'reboot',
-    ],
-    ks.unknownFlags,
-  )
+const commands = applyUnknownFlags(
+  [
+    'text',
+    ...sourceLines(spec),
+    ...localeLines(spec),
+    ...networkLines(spec),
+    ...identityLines(spec),
+    ...storage,
+    bootloaderLine(spec),
+    ...securityLines(spec),
+    ...ks.extraCommands,
+    'firstboot --disable',
+    'reboot',
+  ],
+  ks.unknownFlags,
+)
 ```
 
 And extend the final `content` join to include the extra sections after `post`:
 
 ```ts
-  const content = `${[
-    ...header,
-    ...commands,
-    '',
-    ...packagesBlock(spec),
-    '',
-    ...pre,
-    ...post,
-    ...extraSectionBlocks(ks.extraSections),
-  ]
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trimEnd()}\n`
+const content = `${[
+  ...header,
+  ...commands,
+  '',
+  ...packagesBlock(spec),
+  '',
+  ...pre,
+  ...post,
+  ...extraSectionBlocks(ks.extraSections),
+]
+  .join('\n')
+  .replace(/\n{3,}/g, '\n\n')
+  .trimEnd()}\n`
 ```
 
 - [ ] **Step 5: Run tests + commit**
@@ -538,7 +549,9 @@ describe('detectFormat', () => {
   })
 
   it('detects kickstart from directives + %-sections', () => {
-    expect(detectFormat('lang en_US.UTF-8\ntext\n%packages\n@core\n%end\n').format).toBe('kickstart')
+    expect(detectFormat('lang en_US.UTF-8\ntext\n%packages\n@core\n%end\n').format).toBe(
+      'kickstart',
+    )
   })
 
   it('reports low confidence on garbage', () => {
@@ -580,7 +593,10 @@ export type ImportResult =
 import type { Detection } from './types'
 
 const AUTOINSTALL_MARKERS = [/^#cloud-config\b/m, /^autoinstall\s*:/m, /^\s*version\s*:\s*1\b/m]
-const KICKSTART_MARKERS = [/^%(packages|pre|post|addon|end)\b/m, /^(lang|keyboard|rootpw|autopart|clearpart|bootloader|zerombr)\b/m]
+const KICKSTART_MARKERS = [
+  /^%(packages|pre|post|addon|end)\b/m,
+  /^(lang|keyboard|rootpw|autopart|clearpart|bootloader|zerombr)\b/m,
+]
 
 const score = (text: string, markers: RegExp[]): number =>
   markers.reduce((n, re) => n + (re.test(text) ? 1 : 0), 0)
@@ -858,7 +874,11 @@ describe('parseFlags', () => {
 
   it('respects quoted values', () => {
     const { flags } = parseFlags('--gecos="System Admin"')
-    expect(flags).toContainEqual({ key: 'gecos', value: 'System Admin', raw: '--gecos="System Admin"' })
+    expect(flags).toContainEqual({
+      key: 'gecos',
+      value: 'System Admin',
+      raw: '--gecos="System Admin"',
+    })
   })
 
   it('treats a leading positional (lang) correctly', () => {
@@ -879,7 +899,9 @@ Expected: FAIL — module not found.
 export type Flag = { key: string; value: string | null; raw: string }
 
 const stripQuotes = (s: string): string =>
-  (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'")) ? s.slice(1, -1) : s
+  (s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))
+    ? s.slice(1, -1)
+    : s
 
 /** Split on whitespace but keep quoted spans intact. */
 function tokenize(args: string): string[] {
@@ -953,7 +975,11 @@ describe('tokenizeKickstart', () => {
   it('joins trailing-backslash line continuations into one command', () => {
     const nodes = tokenizeKickstart('network --bootproto=static \\\n  --ip=10.0.0.5\n')
     const cmd = nodes.find((n) => n.kind === 'command')
-    expect(cmd).toMatchObject({ kind: 'command', name: 'network', args: '--bootproto=static --ip=10.0.0.5' })
+    expect(cmd).toMatchObject({
+      kind: 'command',
+      name: 'network',
+      args: '--bootproto=static --ip=10.0.0.5',
+    })
   })
 
   it('assigns per-command occurrence indices', () => {
@@ -1117,7 +1143,12 @@ describe('parseKickstart', () => {
     expect(spec.target.osFamily).toBe('rhel')
     expect(spec.locale.language).toBe('en_US.UTF-8')
     expect(spec.locale.timezone).toBe('Europe/Zurich')
-    expect(spec.network.interfaces[0]).toMatchObject({ mode: 'static', ip: '10.0.0.5', prefix: 24, device: 'eth0' })
+    expect(spec.network.interfaces[0]).toMatchObject({
+      mode: 'static',
+      ip: '10.0.0.5',
+      prefix: 24,
+      device: 'eth0',
+    })
     expect(spec.identity.rootPolicy).toBe('locked')
     expect(spec.security.selinux).toBe('enforcing')
     expect(spec.storage.scheme).toBe('autopart-lvm')
@@ -1161,7 +1192,9 @@ describe('parseKickstart', () => {
   it('soft-fails a bad value: keeps default + warns, does not throw', () => {
     const { spec, diagnostics } = parseKickstart('selinux --bogus-mode\n')
     expect(spec.security.selinux).toBe('enforcing') // default kept
-    expect(diagnostics.some((d) => d.severity === 'warning' && d.field === 'security.selinux')).toBe(true)
+    expect(
+      diagnostics.some((d) => d.severity === 'warning' && d.field === 'security.selinux'),
+    ).toBe(true)
   })
 })
 ```
@@ -1189,7 +1222,10 @@ const SELINUX_MODES = new Set(['enforcing', 'permissive', 'disabled'])
 const netmaskToPrefix = (mask: string): number => {
   const parts = mask.split('.').map(Number)
   if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return 24
-  return parts.reduce((bits, octet) => bits + ((octet >>> 0).toString(2).match(/1/g)?.length ?? 0), 0)
+  return parts.reduce(
+    (bits, octet) => bits + ((octet >>> 0).toString(2).match(/1/g)?.length ?? 0),
+    0,
+  )
 }
 
 const flagVal = (flags: Flag[], key: string): string | undefined =>
@@ -1206,7 +1242,9 @@ export function parseKickstart(text: string): ParseResult {
   let mapped = 0
 
   const nodes = tokenizeKickstart(text)
-  const commands = nodes.filter((n): n is Extract<KsNode, { kind: 'command' }> => n.kind === 'command')
+  const commands = nodes.filter(
+    (n): n is Extract<KsNode, { kind: 'command' }> => n.kind === 'command',
+  )
 
   // --- storage: all-or-nothing decision ---
   const autopart = commands.find((c) => c.name === 'autopart')
@@ -1215,16 +1253,20 @@ export function parseKickstart(text: string): ParseResult {
     parseFlags(autopart.args).flags.some((f) => !AUTOPART_KNOWN.has(f.key))
   const hasComplex = commands.some((c) => COMPLEX_STORAGE.has(c.name)) || autopartExtra
   if (hasComplex) {
-    for (const c of commands) if (STORAGE_CMDS.has(c.name)) spec.passthrough.kickstart.rawStorage.push(c.raw)
+    for (const c of commands)
+      if (STORAGE_CMDS.has(c.name)) spec.passthrough.kickstart.rawStorage.push(c.raw)
     spec.storage.scheme = 'manual'
     spec.storage.partitions = []
   }
-  const consumedByStorage = (name: string): boolean =>
-    hasComplex ? STORAGE_CMDS.has(name) : false
+  const consumedByStorage = (name: string): boolean => (hasComplex ? STORAGE_CMDS.has(name) : false)
 
   const recordUnknownFlags = (cmd: string, index: number, unknown: Flag[]): void => {
     if (unknown.length > 0)
-      spec.passthrough.kickstart.unknownFlags.push({ command: cmd, index, flags: unknown.map((f) => f.raw) })
+      spec.passthrough.kickstart.unknownFlags.push({
+        command: cmd,
+        index,
+        flags: unknown.map((f) => f.raw),
+      })
   }
 
   for (const node of nodes) {
@@ -1232,7 +1274,10 @@ export function parseKickstart(text: string): ParseResult {
     if (node.kind === 'section') {
       const header = node.header
       if (header.startsWith('%packages')) {
-        for (const line of node.body.split('\n').map((l) => l.trim()).filter(Boolean)) {
+        for (const line of node.body
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean)) {
           if (line.startsWith('@')) spec.packages.groups.push(line)
           else spec.packages.individual.push(line) // includes excludes like -nano, verbatim
         }
@@ -1270,13 +1315,21 @@ export function parseKickstart(text: string): ParseResult {
         break
       case 'keyboard':
         spec.locale.keyboard = flagVal(flags, 'vckeymap') ?? positionals[0] ?? spec.locale.keyboard
-        recordUnknownFlags(name, index, flags.filter((f) => f.key !== 'vckeymap' && f.key !== 'xlayouts'))
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => f.key !== 'vckeymap' && f.key !== 'xlayouts'),
+        )
         mapped++
         break
       case 'timezone':
         if (positionals[0]) spec.locale.timezone = positionals[0]
         spec.locale.utcHardwareClock = hasFlag(flags, 'utc')
-        recordUnknownFlags(name, index, flags.filter((f) => f.key !== 'utc'))
+        recordUnknownFlags(
+          name,
+          index,
+          flags.filter((f) => f.key !== 'utc'),
+        )
         mapped++
         break
       case 'network': {
@@ -1284,7 +1337,9 @@ export function parseKickstart(text: string): ParseResult {
           device: flagVal(flags, 'device') ?? 'link',
           mode: (flagVal(flags, 'bootproto') === 'static' ? 'static' : 'dhcp') as 'static' | 'dhcp',
           ip: flagVal(flags, 'ip') ?? '',
-          prefix: flagVal(flags, 'netmask') ? netmaskToPrefix(flagVal(flags, 'netmask') as string) : 24,
+          prefix: flagVal(flags, 'netmask')
+            ? netmaskToPrefix(flagVal(flags, 'netmask') as string)
+            : 24,
           gateway: flagVal(flags, 'gateway') ?? '',
           nameservers: flagVal(flags, 'nameserver') ? [flagVal(flags, 'nameserver') as string] : [],
         }
@@ -1295,7 +1350,19 @@ export function parseKickstart(text: string): ParseResult {
         recordUnknownFlags(
           name,
           index,
-          flags.filter((f) => !['device', 'bootproto', 'ip', 'netmask', 'gateway', 'nameserver', 'hostname', 'activate'].includes(f.key)),
+          flags.filter(
+            (f) =>
+              ![
+                'device',
+                'bootproto',
+                'ip',
+                'netmask',
+                'gateway',
+                'nameserver',
+                'hostname',
+                'activate',
+              ].includes(f.key),
+          ),
         )
         mapped++
         break
@@ -1310,7 +1377,8 @@ export function parseKickstart(text: string): ParseResult {
         break
       case 'selinux': {
         const mode = ['enforcing', 'permissive', 'disabled'].find((m) => hasFlag(flags, m))
-        if (mode && SELINUX_MODES.has(mode)) spec.security.selinux = mode as InstallSpec['security']['selinux']
+        if (mode && SELINUX_MODES.has(mode))
+          spec.security.selinux = mode as InstallSpec['security']['selinux']
         else
           diagnostics.push({
             severity: 'warning',
@@ -1347,7 +1415,10 @@ export function parseKickstart(text: string): ParseResult {
 
   const pk = spec.passthrough.kickstart
   const passthroughCount =
-    pk.extraCommands.length + pk.unknownFlags.length + pk.extraSections.length + (pk.rawStorage.length > 0 ? 1 : 0)
+    pk.extraCommands.length +
+    pk.unknownFlags.length +
+    pk.extraSections.length +
+    (pk.rawStorage.length > 0 ? 1 : 0)
   return { spec, diagnostics, mappedCount: mapped, passthroughCount }
 }
 ```
@@ -1501,40 +1572,77 @@ export function parseAutoinstall(text: string): ParseResult {
 
   if ('version' in ai) {
     if (ai.version !== 1)
-      diagnostics.push({ severity: 'warning', field: 'version', message: `autoinstall version ${String(ai.version)} (expected 1); imported anyway.` })
+      diagnostics.push({
+        severity: 'warning',
+        field: 'version',
+        message: `autoinstall version ${String(ai.version)} (expected 1); imported anyway.`,
+      })
     consume('version')
     mapped++
   }
   const locale = asString(ai.locale)
-  if (locale) { spec.locale.language = locale; consume('locale'); mapped++ }
+  if (locale) {
+    spec.locale.language = locale
+    consume('locale')
+    mapped++
+  }
   if (isObj(ai.keyboard)) {
     if (asString(ai.keyboard.layout)) spec.locale.keyboard = asString(ai.keyboard.layout) as string
-    if (asString(ai.keyboard.variant)) spec.locale.keyboardVariant = asString(ai.keyboard.variant) as string
-    consume('keyboard', 'layout'); consume('keyboard', 'variant'); mapped++
+    if (asString(ai.keyboard.variant))
+      spec.locale.keyboardVariant = asString(ai.keyboard.variant) as string
+    consume('keyboard', 'layout')
+    consume('keyboard', 'variant')
+    mapped++
   }
-  if (asString(ai.timezone)) { spec.locale.timezone = asString(ai.timezone) as string; consume('timezone'); mapped++ }
+  if (asString(ai.timezone)) {
+    spec.locale.timezone = asString(ai.timezone) as string
+    consume('timezone')
+    mapped++
+  }
   if (isObj(ai.identity)) {
     const id = ai.identity
-    if (asString(id.hostname)) { spec.network.hostname = asString(id.hostname) as string; consume('identity', 'hostname') }
-    if (asString(id.username)) { spec.identity.primaryUser.name = asString(id.username) as string; consume('identity', 'username') }
-    if (asString(id.realname)) { spec.identity.primaryUser.gecos = asString(id.realname) as string; consume('identity', 'realname') }
-    if (asString(id.password)) { spec.identity.primaryUser.passwordMode = 'hashed'; spec.identity.primaryUser.passwordCrypt = asString(id.password) as string; consume('identity', 'password') }
+    if (asString(id.hostname)) {
+      spec.network.hostname = asString(id.hostname) as string
+      consume('identity', 'hostname')
+    }
+    if (asString(id.username)) {
+      spec.identity.primaryUser.name = asString(id.username) as string
+      consume('identity', 'username')
+    }
+    if (asString(id.realname)) {
+      spec.identity.primaryUser.gecos = asString(id.realname) as string
+      consume('identity', 'realname')
+    }
+    if (asString(id.password)) {
+      spec.identity.primaryUser.passwordMode = 'hashed'
+      spec.identity.primaryUser.passwordCrypt = asString(id.password) as string
+      consume('identity', 'password')
+    }
     mapped++
   }
   if (isObj(ai.ssh)) {
     spec.security.sshHardening.passwordAuth = ai.ssh['allow-pw'] === true
     const keys = ai.ssh['authorized-keys']
-    if (Array.isArray(keys)) spec.identity.primaryUser.sshKeys = keys.filter((k): k is string => typeof k === 'string')
-    consume('ssh', 'install-server'); consume('ssh', 'allow-pw'); consume('ssh', 'authorized-keys'); mapped++
+    if (Array.isArray(keys))
+      spec.identity.primaryUser.sshKeys = keys.filter((k): k is string => typeof k === 'string')
+    consume('ssh', 'install-server')
+    consume('ssh', 'allow-pw')
+    consume('ssh', 'authorized-keys')
+    mapped++
   }
   if (isObj(ai.storage) && isObj(ai.storage.layout)) {
     spec.storage.scheme = ai.storage.layout.name === 'direct' ? 'autopart-plain' : 'autopart-lvm'
-    if (asString(ai.storage.layout.password)) { spec.storage.encryption.enabled = true; spec.storage.encryption.passphrase = asString(ai.storage.layout.password) as string }
-    consume('storage', 'layout'); mapped++
+    if (asString(ai.storage.layout.password)) {
+      spec.storage.encryption.enabled = true
+      spec.storage.encryption.passphrase = asString(ai.storage.layout.password) as string
+    }
+    consume('storage', 'layout')
+    mapped++
   }
   if (Array.isArray(ai.packages)) {
     spec.packages.individual = ai.packages.filter((p): p is string => typeof p === 'string')
-    consume('packages'); mapped++
+    consume('packages')
+    mapped++
   }
   for (const key of ['early-commands', 'late-commands'] as const) {
     const cmds = ai[key]
@@ -1542,10 +1650,14 @@ export function parseAutoinstall(text: string): ParseResult {
       const list = cmds.filter((c): c is string => typeof c === 'string')
       if (key === 'early-commands') spec.scripts.earlyCommands = list
       else spec.scripts.lateCommands = list
-      consume(key); mapped++
+      consume(key)
+      mapped++
     }
   }
-  if ('shutdown' in ai) { consume('shutdown'); mapped++ }
+  if ('shutdown' in ai) {
+    consume('shutdown')
+    mapped++
+  }
 
   spec.passthrough.autoinstall.extraKeys = extra
   const passthroughCount = Object.keys(extra).length
@@ -1658,7 +1770,10 @@ export function importFile(text: string, override?: TargetFormat): ImportResult 
   // Backstop: handlers only write valid values, so this should always pass.
   const validated = InstallSpecSchema.safeParse(parsed.spec)
   if (!validated.success) {
-    return { ok: false, error: `Parsed spec failed validation: ${validated.error.issues[0]?.message ?? 'unknown'}` }
+    return {
+      ok: false,
+      error: `Parsed spec failed validation: ${validated.error.issues[0]?.message ?? 'unknown'}`,
+    }
   }
 
   const rt = roundTrip(text, validated.data, detected)
@@ -1779,7 +1894,11 @@ import type { TargetFormat } from '../model'
 import { emit } from '../emit'
 import { importFile } from './importFile'
 
-const files = import.meta.glob('../../__fixtures__/importCorpus/*', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+const files = import.meta.glob('../../__fixtures__/importCorpus/*', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
 
 const cases = Object.entries(files).map(([path, content]) => ({
   name: path.split('/').pop() as string,
@@ -1813,7 +1932,11 @@ describe('import corpus round-trip', () => {
     expect(pk.extraCommands.some((c) => c.startsWith('module --name=idm'))).toBe(true)
     expect(pk.rawStorage.some((l) => l.startsWith('volgroup'))).toBe(true)
     expect(pk.extraSections.some((s) => s.header.startsWith('%addon'))).toBe(true)
-    expect(pk.unknownFlags).toContainEqual({ command: 'network', index: 1, flags: ['--bindto=mac'] })
+    expect(pk.unknownFlags).toContainEqual({
+      command: 'network',
+      index: 1,
+      flags: ['--bindto=mac'],
+    })
   })
 
   it('preserves un-modeled autoinstall keys verbatim', () => {
@@ -1909,7 +2032,11 @@ const BADGE: Record<OkResult['report']['fidelity'], string> = {
   lossy: 'bg-rose-600',
 }
 
-export function ImportReview({ result, onConfirm, onCancel }: {
+export function ImportReview({
+  result,
+  onConfirm,
+  onCancel,
+}: {
   result: OkResult
   onConfirm: () => void
   onCancel: () => void
@@ -1919,24 +2046,36 @@ export function ImportReview({ result, onConfirm, onCancel }: {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2 text-sm">
-        <span className={`rounded px-2 py-0.5 text-white ${BADGE[report.fidelity]}`}>{report.fidelity}</span>
-        <span>{t('import.mapped', { count: report.mappedCount })} · {t('import.preserved', { count: report.passthroughCount })}</span>
+        <span className={`rounded px-2 py-0.5 text-white ${BADGE[report.fidelity]}`}>
+          {report.fidelity}
+        </span>
+        <span>
+          {t('import.mapped', { count: report.mappedCount })} ·{' '}
+          {t('import.preserved', { count: report.passthroughCount })}
+        </span>
       </div>
       <p className="text-xs text-slate-500 dark:text-slate-400">{t('import.verbatimNote')}</p>
       <pre className="code-pane max-h-72 overflow-auto text-xs">
         {report.diff.map((d, i) => (
           <div
             key={`${i}-${d.text}`}
-            className={d.tag === 'add' ? 'text-emerald-500' : d.tag === 'del' ? 'text-rose-500' : ''}
+            className={
+              d.tag === 'add' ? 'text-emerald-500' : d.tag === 'del' ? 'text-rose-500' : ''
+            }
           >
-            {d.tag === 'add' ? '+ ' : d.tag === 'del' ? '- ' : '  '}{d.text}
+            {d.tag === 'add' ? '+ ' : d.tag === 'del' ? '- ' : '  '}
+            {d.text}
           </div>
         ))}
       </pre>
       {diagnostics.length > 0 && <DiagnosticsList diagnostics={diagnostics} />}
       <div className="flex gap-2">
-        <button type="button" className="btn-primary" onClick={onConfirm}>{t('import.confirm')}</button>
-        <button type="button" className="btn-ghost" onClick={onCancel}>{t('import.cancel')}</button>
+        <button type="button" className="btn-primary" onClick={onConfirm}>
+          {t('import.confirm')}
+        </button>
+        <button type="button" className="btn-ghost" onClick={onCancel}>
+          {t('import.cancel')}
+        </button>
       </div>
     </div>
   )
@@ -1986,27 +2125,36 @@ export function ImportPanel({ onClose }: { onClose: () => void }) {
         onChange={(e) => setText(e.target.value)}
       />
       <div className="flex items-center gap-2">
-        <button type="button" className="btn-primary" onClick={onParse}>{t('import.parse')}</button>
+        <button type="button" className="btn-primary" onClick={onParse}>
+          {t('import.parse')}
+        </button>
         <label className="btn-ghost cursor-pointer">
           {t('import.chooseFile')}
           <input
             type="file"
             className="hidden"
             accept=".cfg,.ks,.yaml,.yml,user-data,text/plain"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickFile(f); e.target.value = '' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) onPickFile(f)
+              e.target.value = ''
+            }}
           />
         </label>
-        <button type="button" className="btn-ghost" onClick={onClose}>{t('import.close')}</button>
+        <button type="button" className="btn-ghost" onClick={onClose}>
+          {t('import.close')}
+        </button>
       </div>
       {result && !result.ok && <p className="text-sm text-rose-500">{result.error}</p>}
-      {result?.ok && <ImportReview result={result} onConfirm={onConfirm} onCancel={() => setResult(null)} />}
+      {result?.ok && (
+        <ImportReview result={result} onConfirm={onConfirm} onCancel={() => setResult(null)} />
+      )}
     </div>
   )
 }
 ```
 
 > Note: confirm `DiagnosticsList` accepts a `diagnostics` prop. If its current prop name differs, match the existing signature (read `src/components/DiagnosticsList.tsx`) rather than changing the component.
-
 - [ ] **Step 5: Run tests + commit**
 
 Run: `npx vitest run src/components/import/ && npx tsc --noEmit`
@@ -2125,23 +2273,24 @@ import { useState } from 'react'
 Inside the component, add `const [importing, setImporting] = useState(false)`. Relabel the existing JSON button to `t('profile.import')` → keep, but add the new native-import button next to it:
 
 ```tsx
-      <button type="button" className="btn-ghost" onClick={() => setImporting(true)}>
-        {t('import.open')}
-      </button>
+;<button type="button" className="btn-ghost" onClick={() => setImporting(true)}>
+  {t('import.open')}
+</button>
 ```
 
 And render the panel (e.g. below the bar) when `importing`:
 
 ```tsx
-      {importing && (
-        <div className="absolute z-10 mt-2 w-[36rem] max-w-[90vw]">
-          <ImportPanel onClose={() => setImporting(false)} />
-        </div>
-      )}
+{
+  importing && (
+    <div className="absolute z-10 mt-2 w-[36rem] max-w-[90vw]">
+      <ImportPanel onClose={() => setImporting(false)} />
+    </div>
+  )
+}
 ```
 
 > Wrap the `ProfileBar` root in `relative` if the absolute panel needs anchoring, matching the existing layout conventions.
-
 - [ ] **Step 4: Write + run the integration test**
 
 ```tsx
@@ -2155,7 +2304,9 @@ describe('import integration via ProfileBar', () => {
   it('opens the panel, parses, and loads a kickstart file', () => {
     render(<ProfileBar />)
     fireEvent.click(screen.getByRole('button', { name: /import install file/i }))
-    fireEvent.change(screen.getByLabelText(/paste/i), { target: { value: 'text\nlang it_IT.UTF-8\n' } })
+    fireEvent.change(screen.getByLabelText(/paste/i), {
+      target: { value: 'text\nlang it_IT.UTF-8\n' },
+    })
     fireEvent.click(screen.getByRole('button', { name: /parse/i }))
     fireEvent.click(screen.getByRole('button', { name: /confirm/i }))
     expect(useGeneratorStore.getState().spec.locale.language).toBe('it_IT.UTF-8')

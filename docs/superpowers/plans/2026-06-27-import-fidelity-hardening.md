@@ -38,13 +38,13 @@ Lands together because round-trip needs parser capture AND emitter re-emission t
 
 **Constant slots.** The emitter emits a fixed set of opinionated constants. Map each constant command to a SLOT and emit `constantLines[slot] ?? <hardcoded default>`:
 
-| slot | commands that fill it (parser) | emitter default when slot empty |
-|---|---|---|
-| `mode` | `text`, `graphical`, `cmdline` | `text` |
-| `bootloader` | `bootloader` | `bootloader --location=mbr` (current `bootloaderLine`) |
-| `services` | `services` | `services --enabled=sshd,chronyd` |
-| `firstboot` | `firstboot` | `firstboot --disable` |
-| `power` | `reboot`, `poweroff`, `halt`, `shutdown` | `reboot` |
+| slot         | commands that fill it (parser)           | emitter default when slot empty                        |
+| ------------ | ---------------------------------------- | ------------------------------------------------------ |
+| `mode`       | `text`, `graphical`, `cmdline`           | `text`                                                 |
+| `bootloader` | `bootloader`                             | `bootloader --location=mbr` (current `bootloaderLine`) |
+| `services`   | `services`                               | `services --enabled=sshd,chronyd`                      |
+| `firstboot`  | `firstboot`                              | `firstboot --disable`                                  |
+| `power`      | `reboot`, `poweroff`, `halt`, `shutdown` | `reboot`                                               |
 
 Parser stores `constantLines[slot] = node.raw` (the verbatim original line). Emitter emits the slot value if present else the default. This is duplication-free (replaces the default, not appended) and idempotent (re-parse stores the same raw line into the same slot). Default spec (no import) → all slots empty → identical hardcoded output → existing snapshots unchanged for these lines.
 

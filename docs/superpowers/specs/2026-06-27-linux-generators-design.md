@@ -29,16 +29,16 @@ install file → download, 100% client-side, deployed to GitHub Pages.
 
 ## Decisions
 
-| Topic | Decision |
-|-------|----------|
-| Scope | Kickstart + Autoinstall first; Preseed + Agama later as additional engines |
-| Output | Install files only — the file is the product |
-| Format gaps | Warn-only; never inject functional shell workarounds |
-| Storage | Guided layouts first-class for both; `manual` routes to raw overrides |
-| Persistence | JSON profile export/import + presets; opt-in (default-off) draft autosave, secrets stripped |
-| Passwords | SSH-key-first; optional client-side `$6$` via `@noble/hashes` + hand-rolled wrapper (vector-tested) |
-| Autoinstall YAML | `yaml` (eemeli), not a hand-rolled emitter |
-| Privacy | `fetchGuard` throws on any cross-origin request; CSP `connect-src 'self'` |
+| Topic            | Decision                                                                                            |
+| ---------------- | --------------------------------------------------------------------------------------------------- |
+| Scope            | Kickstart + Autoinstall first; Preseed + Agama later as additional engines                          |
+| Output           | Install files only — the file is the product                                                        |
+| Format gaps      | Warn-only; never inject functional shell workarounds                                                |
+| Storage          | Guided layouts first-class for both; `manual` routes to raw overrides                               |
+| Persistence      | JSON profile export/import + presets; opt-in (default-off) draft autosave, secrets stripped         |
+| Passwords        | SSH-key-first; optional client-side `$6$` via `@noble/hashes` + hand-rolled wrapper (vector-tested) |
+| Autoinstall YAML | `yaml` (eemeli), not a hand-rolled emitter                                                          |
+| Privacy          | `fetchGuard` throws on any cross-origin request; CSP `connect-src 'self'`                           |
 
 ## Roadmap
 
