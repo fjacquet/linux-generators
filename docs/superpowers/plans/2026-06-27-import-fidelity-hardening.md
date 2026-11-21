@@ -23,6 +23,7 @@
 Lands together because round-trip needs parser capture AND emitter re-emission to agree.
 
 **Files:**
+
 - Modify: `src/engines/model/installSpec.ts` (passthrough.kickstart: add 4 fields)
 - Modify: `src/engines/emit/kickstart/sections.ts` (keyboard, packagesBlock, constant slots), `src/engines/emit/kickstart/emitKickstart.ts` (constant slots, %pre/%post headers)
 - Modify: `src/engines/import/kickstart/parseKickstart.ts` (constants, %packages/%pre/%post headers, keyboard --xlayouts, autopart --nohome)
@@ -30,6 +31,7 @@ Lands together because round-trip needs parser capture AND emitter re-emission t
 - Test: `parseKickstart.test.ts`, `sections.test.ts`/`emitKickstart*.test.ts` as needed
 
 **Interfaces produced (later tasks/consumers rely on these):**
+
 - `passthrough.kickstart.constantLines: Record<string,string>` — slot → raw command line. Slots: `mode`, `bootloader`, `services`, `firstboot`, `power`.
 - `passthrough.kickstart.packagesHeader: string` — text AFTER `%packages` on the header line (e.g. ` --ignoremissing --excludedocs`), '' default.
 - `passthrough.kickstart.preHeader: string`, `postHeader: string` — the full captured section header line (e.g. `%post --log=/root/post.log`), '' default = emitter uses its hardcoded default header.
@@ -59,6 +61,7 @@ Parser stores `constantLines[slot] = node.raw` (the verbatim original line). Emi
 - [ ] **Step 1: Add the 4 passthrough.kickstart fields (Zod, backward-compatible)**
 
 In `installSpec.ts` passthrough.kickstart object, add after `rawStorage`:
+
 ```ts
 constantLines: z.record(z.string(), z.string()).default({}),
 packagesHeader: z.string().default(''),
@@ -113,6 +116,7 @@ if (isObj(ai.apt) && Array.isArray(ai.apt.primary)) {
 }
 ```
 Leave `arches` and any further entries in `extraKeys`. (Code comment: a CUSTOM `arches` on the primary mirror is preserved in `extraKeys` but, due to deepMerge array-replace, the emitter's default `arches:[default]` wins on re-emit — acceptable known edge; uri round-trips.)
+
 - [ ] **Step 4: `shutdown` (separate silent-loss bug — fix here).** The parser consumes+discards `shutdown` (lines 270-271) while the emitter hardcodes `autoinstall.shutdown = 'reboot'` (emitAutoinstall.ts:143) and is the deepMerge WINNER — so a custom `shutdown: poweroff`/`halt` is silently overwritten by `reboot`. Fix: (a) parser — DELETE the `if ('shutdown' in ai) { consume('shutdown'); mapped++ }` block entirely so `shutdown` survives into `extraKeys`; (b) emitter — replace `autoinstall.shutdown = 'reboot'` with `autoinstall.shutdown = (extraKeys.shutdown as string) ?? 'reboot'`. Default spec (empty extraKeys) → `'reboot'` → snapshots unchanged; imported `shutdown: poweroff` → `extraKeys.shutdown='poweroff'` → winner is `'poweroff'` → round-trips. NOTE: read `extraKeys` (`spec.passthrough.autoinstall.extraKeys`) BEFORE the `deepMerge` call at emitAutoinstall.ts:145-146.
 - [ ] **Step 5: Tests** — a `user-data` with `ethernets.eth0.mtu: 1400` + `match` preserves them in `extraKeys` and round-trips idempotently; `storage.layout.sizing-policy` preserved; `apt.primary[0].arches` preserved in `extraKeys` (and `uri` still maps to aptMirror); `shutdown: poweroff` round-trips (not overwritten by reboot). Run `npx vitest run src/engines/import/autoinstall src/engines/emit/autoinstall && npx tsc --noEmit`.
 - [ ] **Step 6: Commit** `feat(import): leaf-precise autoinstall deletion + preserve shutdown/netplan/apt/layout keys`

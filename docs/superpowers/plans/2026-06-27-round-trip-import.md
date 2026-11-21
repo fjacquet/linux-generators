@@ -86,10 +86,12 @@ function importFile(text: string, override?: TargetFormat): ImportResult
 ## Task 1: Passthrough model field
 
 **Files:**
+
 - Modify: `src/engines/model/installSpec.ts`
 - Test: `src/engines/model/passthrough.test.ts`
 
 **Interfaces:**
+
 - Produces: `InstallSpec['passthrough']` (shape in Shared Interfaces). Backward-compatible: defaults to all-empty.
 
 - [ ] **Step 1: Write the failing test**
@@ -207,10 +209,12 @@ git commit -m "feat(model): add backward-compatible passthrough buckets"
 ## Task 2: `deepMerge` utility
 
 **Files:**
+
 - Create: `src/utils/deepMerge.ts`
 - Test: `src/utils/deepMerge.test.ts`
 
 **Interfaces:**
+
 - Produces: `deepMerge(winner, loser)` — winner precedence; two plain objects merge recursively; any array/primitive on either side means winner replaces (no array concat).
 
 - [ ] **Step 1: Write the failing test**
@@ -290,10 +294,12 @@ git commit -m "feat(utils): add winner-precedence deepMerge"
 ## Task 3: Autoinstall emit merges `extraKeys`
 
 **Files:**
+
 - Modify: `src/engines/emit/autoinstall/emitAutoinstall.ts`
 - Test: `src/engines/emit/autoinstall/emitAutoinstall.passthrough.test.ts`
 
 **Interfaces:**
+
 - Consumes: `deepMerge` (Task 2), `InstallSpec.passthrough.autoinstall.extraKeys` (Task 1).
 
 - [ ] **Step 1: Write the failing test**
@@ -369,11 +375,13 @@ git commit -m "feat(emit): merge autoinstall extraKeys passthrough"
 ## Task 4: Kickstart emit merges passthrough buckets
 
 **Files:**
+
 - Create: `src/engines/emit/kickstart/passthrough.ts`
 - Modify: `src/engines/emit/kickstart/emitKickstart.ts`
 - Test: `src/engines/emit/kickstart/passthrough.test.ts`
 
 **Interfaces:**
+
 - Consumes: `InstallSpec.passthrough.kickstart` (Task 1).
 - Produces: `applyUnknownFlags(commands: string[], unknownFlags): string[]`.
 
@@ -526,10 +534,12 @@ git commit -m "feat(emit): merge kickstart passthrough (rawStorage, flags, comma
 ## Task 5: Format detection + import types
 
 **Files:**
+
 - Create: `src/engines/import/detectFormat.ts`, `src/engines/import/types.ts`
 - Test: `src/engines/import/detectFormat.test.ts`
 
 **Interfaces:**
+
 - Produces: `detectFormat(text): Detection`; the `import/types.ts` type aliases (Shared Interfaces).
 
 - [ ] **Step 1: Write the failing test**
@@ -628,10 +638,12 @@ git commit -m "feat(import): format detection + result types"
 ## Task 6: `diffLines` utility (LCS + cap)
 
 **Files:**
+
 - Create: `src/utils/diff.ts`
 - Test: `src/utils/diff.test.ts`
 
 **Interfaces:**
+
 - Produces: `DiffLine`, `diffLines(a, b)` (Shared Interfaces).
 
 - [ ] **Step 1: Write the failing test**
@@ -746,10 +758,12 @@ git commit -m "feat(utils): line-level LCS diff with large-input cap"
 ## Task 7: `roundTrip` fidelity classifier
 
 **Files:**
+
 - Create: `src/engines/import/roundTrip.ts`
 - Test: `src/engines/import/roundTrip.test.ts`
 
 **Interfaces:**
+
 - Consumes: `emit` (`@engines/emit`), `diffLines` (Task 6).
 - Produces: `roundTrip(originalText, spec, format): RoundTripResult`.
 
@@ -850,10 +864,12 @@ git commit -m "feat(import): roundTrip fidelity classifier"
 ## Task 8: Kickstart flag parser
 
 **Files:**
+
 - Create: `src/engines/import/kickstart/flags.ts`
 - Test: `src/engines/import/kickstart/flags.test.ts`
 
 **Interfaces:**
+
 - Produces: `Flag`, `parseFlags(args)` (Shared Interfaces).
 
 - [ ] **Step 1: Write the failing test**
@@ -958,10 +974,12 @@ git commit -m "feat(import): kickstart flag parser"
 ## Task 9: Kickstart tokenizer
 
 **Files:**
+
 - Create: `src/engines/import/kickstart/tokenize.ts`
 - Test: `src/engines/import/kickstart/tokenize.test.ts`
 
 **Interfaces:**
+
 - Produces: `KsNode`, `tokenizeKickstart(text)` (Shared Interfaces).
 
 - [ ] **Step 1: Write the failing test**
@@ -1095,14 +1113,17 @@ git commit -m "feat(import): kickstart tokenizer with continuations + occurrence
 ## Task 10: Kickstart parser
 
 **Files:**
+
 - Create: `src/engines/import/kickstart/parseKickstart.ts`
 - Test: `src/engines/import/kickstart/parseKickstart.test.ts`
 
 **Interfaces:**
+
 - Consumes: `tokenizeKickstart` (Task 9), `parseFlags` (Task 8), `freshDefaultSpec` (`@engines/model`).
 - Produces: `parseKickstart(text): ParseResult`.
 
 **Design notes for the implementer:**
+
 - Start from `freshDefaultSpec()` with `target.osFamily='rhel'`. Clear the seeded `packages` so imported packages don't mix with defaults: set `spec.packages.groups = []` and `spec.packages.individual = []` before mapping.
 - **All-or-nothing storage:** scan command nodes first. If any of `part`/`logvol`/`volgroup`/`raid`/`btrfs` is present, OR an `autopart` carries a flag other than `--type`/`--encrypted`/`--passphrase`/`--nohome`, then push every `clearpart`/`part`/`logvol`/`volgroup`/`raid`/`btrfs` raw line into `rawStorage` (original order), set `scheme='manual'`, leave `partitions=[]`, and mark those nodes "consumed by storage" so the main loop skips them. Otherwise model `autopart`/`clearpart` normally.
 - **Remainder rule:** a command with no handler → `extraCommands.push(node.raw)`. A handled command whose `parseFlags` produced a flag key the handler didn't consume → `unknownFlags.push({ command: name, index: node.index, flags: [unconsumed.raw] })`. A non-pre/post/packages section → `extraSections`. `%pre`/`%post` body → `rawKickstartPre/Post`.
@@ -1441,14 +1462,17 @@ git commit -m "feat(import): kickstart parser with all-or-nothing storage + rema
 ## Task 11: Autoinstall parser
 
 **Files:**
+
 - Create: `src/engines/import/autoinstall/parseAutoinstall.ts`
 - Test: `src/engines/import/autoinstall/parseAutoinstall.test.ts`
 
 **Interfaces:**
+
 - Consumes: `fromYaml` (`../emit/autoinstall/yaml`), `freshDefaultSpec`.
 - Produces: `parseAutoinstall(text): ParseResult` (throws only on malformed YAML).
 
 **Design notes:**
+
 - `fromYaml` may throw → let it propagate; `importFile` (Task 12) catches it for the hard-fail path.
 - Build `extraKeys` by deep-cloning the parsed `autoinstall` object and **deleting only consumed leaves** (helper `deleteLeaf(obj, path)` that prunes a parent once it is emptied).
 - Soft-fail per field as in Kickstart.
@@ -1683,10 +1707,12 @@ git commit -m "feat(import): autoinstall parser with leaf-level remainder"
 ## Task 12: `importFile` orchestrator + barrel
 
 **Files:**
+
 - Create: `src/engines/import/importFile.ts`, `src/engines/import/index.ts`
 - Test: `src/engines/import/importFile.test.ts`
 
 **Interfaces:**
+
 - Consumes: `detectFormat`, `parseKickstart`, `parseAutoinstall`, `roundTrip`, `InstallSpecSchema`.
 - Produces: `importFile(text, override?): ImportResult` and the public barrel.
 
@@ -1811,10 +1837,12 @@ git commit -m "feat(import): importFile orchestrator + public barrel"
 ## Task 13: Import corpus + round-trip property tests
 
 **Files:**
+
 - Create: `src/__fixtures__/importCorpus/rhel-complex.ks`, `src/__fixtures__/importCorpus/ubuntu-complex.user-data`
 - Test: `src/engines/import/corpus.test.ts`
 
 **Interfaces:**
+
 - Consumes: `importFile`, `emit`. Uses Vitest `import.meta.glob` to load fixtures as raw text.
 
 - [ ] **Step 1: Add the fixtures**
@@ -1975,10 +2003,12 @@ git commit -m "test(import): corpus round-trip + idempotence property tests"
 ## Task 14: Import UI — Panel + Review
 
 **Files:**
+
 - Create: `src/components/import/ImportPanel.tsx`, `src/components/import/ImportReview.tsx`
 - Test: `src/components/import/ImportPanel.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `importFile`, `ImportResult` (`@engines/import`), `loadProfile` (store), `DiagnosticsList`.
 - `@engines/import` alias resolves to `src/engines/import` (matches the existing `@engines/*` aliases).
 
@@ -2171,11 +2201,13 @@ git commit -m "feat(ui): import panel + review with fidelity diff"
 ## Task 15: Wire into ProfileBar + i18n
 
 **Files:**
+
 - Modify: `src/components/ProfileBar.tsx`
 - Modify: `src/i18n/locales/en/common.json`, `src/i18n/locales/fr/common.json`, `src/i18n/locales/de/common.json`, `src/i18n/locales/it/common.json`
 - Test: `src/__tests__/importIntegration.test.tsx` (or extend the existing app test)
 
 **Interfaces:**
+
 - Consumes: `ImportPanel` (Task 14).
 
 - [ ] **Step 1: Add i18n keys (all four locales — key parity is gated)**
@@ -2333,6 +2365,7 @@ git commit -m "feat(ui): wire native-file import into ProfileBar + i18n (en/fr/d
 ## Self-Review
 
 **1. Spec coverage** — every spec section maps to a task:
+
 - Passthrough model (incl. `index`, `rawStorage`) → Task 1. Emit-merge (autoinstall extraKeys / kickstart buckets) → Tasks 3–4. `deepMerge` policy → Task 2. Detection → Task 5. Diff + LCS cap → Task 6. `roundTrip` fidelity → Task 7. Kickstart flags/tokenize/parse incl. continuations, all-or-nothing storage, occurrence index, remainder rule → Tasks 8–10. Autoinstall parse incl. leaf-level deletion, soft-fail → Task 11. `importFile` resilient soft-fail + hard-fail-on-garbage → Task 12. Corpus + idempotence + edge-case tests → Tasks 10/11/13. UX panel→review→confirm + verbatim disclosure → Tasks 14–15. i18n parity → Task 15.
 
 **2. Placeholder scan** — no TBD/TODO; every code step carries complete, runnable code; tests show real assertions. The one "fill in additional command handlers" guidance in Task 13 is backed by the complete handler pattern in Task 10 and the remainder rule guarantees safety, not silence.
